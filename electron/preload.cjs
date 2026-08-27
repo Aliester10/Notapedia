@@ -54,6 +54,7 @@ const api = {
   print: {
     document: call('print:document'),
     report: call('print:report'),
+    savePdf: call('pdf:save'),
   },
   excel: {
     export: call('export:excel'),

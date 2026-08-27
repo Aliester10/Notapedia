@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { openDb, getDbPath } from './db.js';
 import * as svc from './services.js';
-import { printDocument, renderDoc, printReport } from './print.js';
+import { printDocument, renderDoc, printReport, saveDocumentPdf, pdfFileNameFor, destroySharedWin } from './print.js';
 import {
   buildLaporanBulanan, buildRekapPiutang,
   namaFileLaporanBulanan, namaFilePiutang,
@@ -44,7 +44,10 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
   }
 
-  mainWindow.on('closed', () => { mainWindow = null; });
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+    if (process.platform !== 'darwin') app.quit();
+  });
 }
 
 // Helper: jalankan handler dan kembalikan {ok, data} atau {ok:false, error}
@@ -149,6 +152,24 @@ function registerIpc() {
     });
   });
 
+  // ── Simpan PDF (ukuran kertas dotmatrix via printToPDF) ──
+  ipcMain.handle('pdf:save', async (ev, type, data) => {
+    const win = BrowserWindow.fromWebContents(ev.sender);
+    try {
+      const pdf = await saveDocumentPdf(type, data);
+      const res = await dialog.showSaveDialog(win, {
+        title: 'Simpan Dokumen PDF',
+        defaultPath: pdfFileNameFor(type, data),
+        filters: [{ name: 'PDF Document', extensions: ['pdf'] }],
+      });
+      if (res.canceled || !res.filePath) return { ok: true, data: null };
+      fs.writeFileSync(res.filePath, pdf);
+      return { ok: true, data: res.filePath };
+    } catch (e) {
+      return { ok: false, error: e.userMessage || e.message };
+    }
+  });
+
   // ── Export Excel ──
   ipcMain.handle('export:excel', async (ev, { tab, bulan, tahun }) => {
     const win = BrowserWindow.fromWebContents(ev.sender);
@@ -206,5 +227,5 @@ app.on('window-all-closed', () => {
 });
 
 app.on('will-quit', () => {
-  // tidak menutup db di sini — biarkan WAL flush normal
+  destroySharedWin();
 });
