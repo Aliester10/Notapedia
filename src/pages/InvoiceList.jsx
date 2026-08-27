@@ -5,7 +5,7 @@ import PageHeader from '../components/PageHeader';
 import StatusBadge from '../components/StatusBadge';
 import Modal from '../components/Modal';
 import { InvoicePrint } from '../components/PrintLayout';
-import { listInvoices, getInvoice, updateInvoiceStatus, printDocument } from '../data/api';
+import { listInvoices, getInvoice, updateInvoiceStatus, printDocument, saveDocumentPdf } from '../data/api';
 import { formatDate, formatRupiah } from '../data/mockData';
 
 const urutanStatus = ['Terkirim', 'Ditagih', 'Dibayar'];
@@ -18,6 +18,7 @@ export default function InvoiceList() {
   const [printInv, setPrintInv] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [pdfInfo, setPdfInfo] = useState('');
 
   const muat = () => {
     listInvoices().then(setInvoiceList).catch(console.error);
@@ -64,6 +65,16 @@ export default function InvoiceList() {
 
   const cetak = () =>
     printDocument('invoice', printInv).catch((e) => alert(e.message));
+
+  const simpanPdf = async () => {
+    setPdfInfo('');
+    try {
+      const path = await saveDocumentPdf('invoice', printInv);
+      setPdfInfo(path ? `PDF tersimpan: ${path}` : 'Penyimpanan dibatalkan.');
+    } catch (e) {
+      setPdfInfo(e.message);
+    }
+  };
 
   return (
     <div>
@@ -222,10 +233,20 @@ export default function InvoiceList() {
           <div className="rounded-lg border border-slate-200 bg-white p-4">
             <InvoicePrint inv={printInv} />
           </div>
-          <div className="mt-4 flex justify-end">
-            <button className="btn-primary" onClick={cetak}>
-              <Printer className="h-4 w-4" /> Cetak Dokumen
-            </button>
+          <div className="mt-4 flex items-center justify-between">
+            <div className="text-xs text-slate-500">
+              {pdfInfo && (
+                <span className={pdfInfo.startsWith('PDF tersimpan') ? 'text-emerald-700' : 'text-red-600'}>{pdfInfo}</span>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <button className="btn-secondary" onClick={simpanPdf}>
+                <Printer className="h-4 w-4" /> Simpan PDF
+              </button>
+              <button className="btn-primary" onClick={cetak}>
+                <Printer className="h-4 w-4" /> Cetak Dokumen
+              </button>
+            </div>
           </div>
         </Modal>
       )}

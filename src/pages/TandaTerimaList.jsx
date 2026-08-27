@@ -4,13 +4,14 @@ import { Plus, Printer, RefreshCw } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import Modal from '../components/Modal';
 import { TandaTerimaPrint } from '../components/PrintLayout';
-import { listTandaTerima, listInvoicesSiapTagih, printDocument } from '../data/api';
+import { listTandaTerima, listInvoicesSiapTagih, printDocument, saveDocumentPdf } from '../data/api';
 import { formatDate, formatRupiah } from '../data/mockData';
 
 export default function TandaTerimaList() {
   const [tandaTerimaList, setTandaTerimaList] = useState([]);
   const [invoicesSiap, setInvoicesSiap] = useState([]);
   const [printTT, setPrintTT] = useState(null);
+  const [pdfInfo, setPdfInfo] = useState('');
 
   const muat = () => {
     listTandaTerima().then(setTandaTerimaList).catch(console.error);
@@ -21,6 +22,16 @@ export default function TandaTerimaList() {
 
   const cetak = () =>
     printDocument('tanda-terima', printTT).catch((e) => alert(e.message));
+
+  const simpanPdf = async () => {
+    setPdfInfo('');
+    try {
+      const path = await saveDocumentPdf('tanda-terima', printTT);
+      setPdfInfo(path ? `PDF tersimpan: ${path}` : 'Penyimpanan dibatalkan.');
+    } catch (e) {
+      setPdfInfo(e.message);
+    }
+  };
 
   return (
     <div>
@@ -112,10 +123,20 @@ export default function TandaTerimaList() {
           <div className="rounded-lg border border-slate-200 bg-white p-4">
             <TandaTerimaPrint tt={printTT} />
           </div>
-          <div className="mt-4 flex justify-end">
-            <button className="btn-primary" onClick={cetak}>
-              <Printer className="h-4 w-4" /> Cetak Dokumen
-            </button>
+          <div className="mt-4 flex items-center justify-between">
+            <div className="text-xs text-slate-500">
+              {pdfInfo && (
+                <span className={pdfInfo.startsWith('PDF tersimpan') ? 'text-emerald-700' : 'text-red-600'}>{pdfInfo}</span>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <button className="btn-secondary" onClick={simpanPdf}>
+                <Printer className="h-4 w-4" /> Simpan PDF
+              </button>
+              <button className="btn-primary" onClick={cetak}>
+                <Printer className="h-4 w-4" /> Cetak Dokumen
+              </button>
+            </div>
           </div>
         </Modal>
       )}

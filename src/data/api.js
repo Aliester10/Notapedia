@@ -126,6 +126,9 @@ export const printReport = ({ tab, bulan, tahun }) =>
     ? call(window.notapedia.print.report, { tab, bulan, tahun })
     : Promise.resolve({ ok: true });
 
+export const saveDocumentPdf = (type, data) =>
+  isElectron ? call(window.notapedia.print.savePdf, type, data) : Promise.resolve(null);
+
 // ── Export Excel ──
 export const exportExcel = ({ tab, bulan, tahun }) =>
   isElectron

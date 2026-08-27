@@ -5,7 +5,7 @@ import PageHeader from '../components/PageHeader';
 import StatusBadge from '../components/StatusBadge';
 import Modal from '../components/Modal';
 import { SJPrint } from '../components/PrintLayout';
-import { getSJ, confirmSJ, printDocument } from '../data/api';
+import { getSJ, confirmSJ, printDocument, saveDocumentPdf } from '../data/api';
 import { formatDate, formatNumber } from '../data/mockData';
 
 export default function SJDetail() {
@@ -18,6 +18,7 @@ export default function SJDetail() {
   const [alasan, setAlasan] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [pdfInfo, setPdfInfo] = useState('');
 
   const muat = () => {
     getSJ(id).then((d) => {
@@ -81,6 +82,16 @@ export default function SJDetail() {
   };
 
   const cetak = () => printDocument('sj', sj).catch((e) => alert(e.message));
+
+  const simpanPdf = async () => {
+    setPdfInfo('');
+    try {
+      const path = await saveDocumentPdf('sj', sj);
+      setPdfInfo(path ? `PDF tersimpan: ${path}` : 'Penyimpanan dibatalkan.');
+    } catch (e) {
+      setPdfInfo(e.message);
+    }
+  };
 
   const totalRetur = sj.items.reduce(
     (s, it) => s + it.retur.reduce((r, x) => r + x.qty_ditolak, 0),
@@ -281,10 +292,20 @@ export default function SJDetail() {
         <div className="rounded-lg border border-slate-200 bg-white p-4">
           <SJPrint sj={sj} />
         </div>
-        <div className="mt-4 flex justify-end">
-          <button className="btn-primary" onClick={cetak}>
-            <Printer className="h-4 w-4" /> Cetak Dokumen
-          </button>
+        <div className="mt-4 flex items-center justify-between">
+          <div className="text-xs text-slate-500">
+            {pdfInfo && (
+              <span className={pdfInfo.startsWith('PDF tersimpan') ? 'text-emerald-700' : 'text-red-600'}>{pdfInfo}</span>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <button className="btn-secondary" onClick={simpanPdf}>
+              <Printer className="h-4 w-4" /> Simpan PDF
+            </button>
+            <button className="btn-primary" onClick={cetak}>
+              <Printer className="h-4 w-4" /> Cetak Dokumen
+            </button>
+          </div>
         </div>
       </Modal>
     </div>
