@@ -2,6 +2,7 @@
 // dotmatrix dengan ukuran halaman custom (setengah A4 / continuous form).
 import { BrowserWindow } from 'electron';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -9,55 +10,101 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const rupiah = (n) => 'Rp ' + (Number(n) || 0).toLocaleString('id-ID');
 
-// Logo toko (cingculogo) di-inline sebagai base64 agar tampil di halaman data: URL.
-let logoBase64 = null;
-function logoDataUrl() {
-  if (logoBase64 === null) {
-    try {
-      const p = path.join(__dirname, 'assets', 'cingculogo.png');
-      logoBase64 = fs.existsSync(p)
-        ? 'data:image/png;base64,' + fs.readFileSync(p).toString('base64')
-        : '';
-    } catch {
-      logoBase64 = '';
-    }
+// Logo toko direferensikan relatif ("logo.png") karena HTML dimuat dari file temp —
+// data: URL berlogo base64 besar gagal dimuat Chromium (ERR_FAILED).
+const LOGO_PATH = path.join(__dirname, 'assets', 'cingculogo.png');
+
+// Siapkan folder temp berisi doc.html + logo.png (agar img relatif tampil).
+function prepareDoc(html) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'notapedia-print-'));
+  if (fs.existsSync(LOGO_PATH)) {
+    fs.copyFileSync(LOGO_PATH, path.join(dir, 'logo.png'));
+  } else {
+    html = html.replace('<img src="logo.png" alt="logo" />', '');
   }
-  return logoBase64;
+  const htmlPath = path.join(dir, 'doc.html');
+  fs.writeFileSync(htmlPath, html, 'utf8');
+  return { htmlPath, dir };
 }
 
+// Satu window tersembunyi yang dipakai ulang untuk semua cetak/PDF —
+// membuat/menghancurkan window berulang kali terbukti tidak stabil.
+let sharedWin = null;
+function getSharedWin() {
+  if (!sharedWin || sharedWin.isDestroyed()) {
+    sharedWin = new BrowserWindow({
+      show: false,
+      webPreferences: { sandbox: true },
+    });
+  }
+  return sharedWin;
+}
+
+export function destroySharedWin() {
+  if (sharedWin && !sharedWin.isDestroyed()) sharedWin.destroy();
+  sharedWin = null;
+}
+
+// Operasi cetak diantre agar tidak saling menimpa window yang sama.
+let printQueue = Promise.resolve();
+function enqueue(task) {
+  const run = printQueue.then(task, task);
+  printQueue = run.catch(() => {});
+  return run;
+}
+
+// Layout identik dengan pratinjau aplikasi (src/components/PrintLayout.jsx):
+// font 12px Courier New, spacing px (Tailwind), header logo kiri + judul kanan.
 const baseCss = `
   * { box-sizing: border-box; }
-  body { margin: 0; padding: 12mm; font-family: 'Courier New', Courier, monospace; color: #000; font-size: 11pt; }
-  .header { display: flex; justify-content: space-between; align-items: flex-start; }
-  .header .logo img { height: 40px; width: auto; }
-  .header .title { text-align: right; font-weight: bold; font-size: 13pt; }
-  .header-line { border-bottom: 1px solid #000; margin-top: 3mm; }
-  .meta { margin-top: 4mm; }
-  table { width: 100%; border-collapse: collapse; margin-top: 4mm; font-size: 10.5pt; }
-  th, td { border: 1px solid #000; padding: 1.5mm 2mm; text-align: left; vertical-align: top; }
+  body { margin: 0; font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #000; background: #fff; }
+  .doc { max-width: 768px; margin: 0 auto; padding: 16px; }
+  .header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  .logo img { height: 40px; width: auto; }
+  .kanan { text-align: right; line-height: 20px; }
+  .kanan .judul { font-size: 16px; font-weight: bold; line-height: 24px; }
+  .header-line { border-bottom: 1px solid #000; margin-top: 8px; }
+  .meta { margin-top: 16px; font-size: 12px; line-height: 20px; }
+  .meta-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 12px; }
+  th, td { border: 1px solid #000; padding: 2px 6px; text-align: left; vertical-align: top; }
   th { font-weight: bold; }
   .num { text-align: right; }
   tfoot td { font-weight: bold; }
-  .sign { margin-top: 14mm; display: flex; justify-content: space-between; }
-  .sign > div { width: 45%; text-align: center; }
-  .sign .space { margin-top: 14mm; }
-  .note { margin-top: 3mm; }
+  .note { margin-top: 12px; font-size: 12px; }
+  .sign { margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 32px; font-size: 12px; }
+  .sign > div { text-align: center; }
+  .sign .space { margin-top: 64px; }
 `;
+
+const fmtNum = (n) => (Number(n) || 0).toLocaleString('id-ID');
+
+// Ukuran kertas per tipe dokumen (CSS @page — dipakai printToPDF via preferCSSPageSize).
+// - invoice: setengah A4 (148 x 210 mm)
+// - SJ / TT: continuous form (210 x 139.7 mm = 5.5 inch)
+const pageCss = {
+  sj: '@page { size: 210mm 139.7mm; margin: 0; }',
+  invoice: '@page { size: 148mm 210mm; margin: 0; }',
+  'tanda-terima': '@page { size: 210mm 139.7mm; margin: 0; }',
+  'laporan-bulanan': '@page { size: 210mm 297mm; margin: 0; }',
+  'rekap-piutang': '@page { size: 210mm 297mm; margin: 0; }',
+};
 
 function docHtml({ css, body }) {
   return `<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body>${body}</body></html>`;
 }
 
-function headerBlock(judul, kanan) {
+// Logo toko (cingculogo) — direferensikan relatif karena HTML dimuat dari file temp.
+function headerBlock(judul, lines) {
   return `
     <div class="header">
-      <div class="logo"><img src="${logoDataUrl()}" alt="logo" /></div>
-      <div class="title">${judul}</div>
+      <div class="logo"><img src="logo.png" alt="logo" /></div>
+      <div class="kanan">
+        <div class="judul">${judul}</div>
+        ${lines.map((l) => `<div>${l}</div>`).join('')}
+      </div>
     </div>
-    <div class="header-line"></div>
-    <div class="meta">
-      ${kanan.map(([label, value]) => `<div><strong>${label}:</strong> ${value}</div>`).join('')}
-    </div>`;
+    <div class="header-line"></div>`;
 }
 
 function htmlSJ(sj) {
@@ -65,7 +112,7 @@ function htmlSJ(sj) {
     .map(
       (it, i) => `<tr>
         <td>${i + 1}</td><td>${it.nama_barang}</td><td>${it.satuan || ''}</td>
-        <td class="num">${it.qty_kirim}</td><td class="num">${it.berat || '-'}</td><td></td>
+        <td class="num">${fmtNum(it.qty_kirim)}</td><td class="num">${it.berat > 0 ? fmtNum(it.berat) : '-'}</td><td></td>
       </tr>`
     )
     .join('');
@@ -74,26 +121,30 @@ function htmlSJ(sj) {
     0
   );
   const body = `
-    ${headerBlock('SURAT JALAN', [
-      ['No', sj.no_sj],
-      ['Tanggal', sj.tanggal_kirim],
-    ])}
-    <div class="meta">
-      <div><strong>No. PO:</strong> ${sj.no_po}</div>
-      <div><strong>Kepada Yth:</strong> ${sj.client_nama}</div>
-      <div><strong>Pengirim:</strong> ${sj.nama_pengirim || ''}</div>
-    </div>
-    <table>
-      <thead><tr><th>No</th><th>Nama Barang</th><th>Satuan</th><th>Qty</th><th>Berat (kg)</th><th>Ket</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-    ${sj.catatan ? `<div class="note">Catatan: ${sj.catatan}</div>` : ''}
-    ${returTotal > 0 ? `<div class="note">Catatan Retur: ${returTotal} ditolak / dikembalikan.</div>` : ''}
-    <div class="sign">
-      <div><div>Pengirim,</div><div class="space">( ${sj.nama_pengirim || '................' } )</div></div>
-      <div><div>Penerima,</div><div class="space">( ${sj.client_nama} )</div></div>
+    <div class="doc">
+      ${headerBlock('SURAT JALAN', [`No. ${sj.no_sj}`, `Tanggal: ${sj.tanggal_kirim}`])}
+      <div class="meta meta-2">
+        <div>
+          <div>No. PO: ${sj.no_po}</div>
+          <div>Kepada Yth: ${sj.client_nama}</div>
+        </div>
+        <div>
+          <div>Pengirim: ${sj.nama_pengirim || ''}</div>
+          <div>Tanggal Kirim: ${sj.tanggal_kirim}</div>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>No</th><th>Nama Barang</th><th>Satuan</th><th>Qty</th><th>Berat (kg)</th><th>Keterangan</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      ${sj.catatan ? `<div class="note">Catatan: ${sj.catatan}</div>` : ''}
+      ${returTotal > 0 ? `<div class="note">Catatan Retur: ${fmtNum(returTotal)} ditolak / dikembalikan.</div>` : ''}
+      <div class="sign">
+        <div><div>Pengirim,</div><div class="space">${sj.nama_pengirim || '................'}</div></div>
+        <div><div>Penerima,</div><div class="space">( ${sj.client_nama} )</div></div>
+      </div>
     </div>`;
-  return docHtml({ css: baseCss, body });
+  return docHtml({ css: baseCss + pageCss.sj, body });
 }
 
 function htmlInvoice(inv) {
@@ -101,31 +152,34 @@ function htmlInvoice(inv) {
     .map(
       (it, i) => `<tr>
         <td>${i + 1}</td><td>${it.nama_barang}</td><td>${it.satuan || ''}</td>
-        <td class="num">${it.qty}</td><td class="num">${rupiah(it.harga_satuan)}</td>
+        <td class="num">${fmtNum(it.qty)}</td><td class="num">${rupiah(it.harga_satuan)}</td>
         <td class="num">${rupiah(it.subtotal)}</td>
       </tr>`
     )
     .join('');
   const body = `
-    ${headerBlock('INVOICE', [
-      ['No', inv.no_invoice],
-      ['Tanggal', inv.tanggal_invoice],
-    ])}
-    <div class="meta">
-      <div><strong>No. PO:</strong> ${inv.no_po}</div>
-      <div><strong>No. SJ:</strong> ${inv.no_sj}</div>
-      <div><strong>Kepada Yth:</strong> ${inv.client_nama}</div>
-    </div>
-    <table>
-      <thead><tr><th>No</th><th>Nama Barang</th><th>Satuan</th><th>Qty</th><th>Harga</th><th>Jumlah</th></tr></thead>
-      <tbody>${rows}</tbody>
-      <tfoot><tr><td colspan="5" class="num">TOTAL</td><td class="num">${rupiah(inv.total)}</td></tr></tfoot>
-    </table>
-    <div class="sign">
-      <div><div>Hormat Kami,</div><div class="space">( NOTAPEDIA )</div></div>
-      <div><div>Mengetahui / Menerima,</div><div class="space">( ${inv.client_nama} )</div></div>
+    <div class="doc">
+      ${headerBlock('INVOICE', [`No. ${inv.no_invoice}`, `Tanggal: ${inv.tanggal_invoice}`])}
+      <div class="meta meta-2">
+        <div>
+          <div>No. PO: ${inv.no_po}</div>
+          <div>No. SJ: ${inv.no_sj}</div>
+        </div>
+        <div>
+          <div>Kepada Yth: ${inv.client_nama}</div>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>No</th><th>Nama Barang</th><th>Satuan</th><th>Qty</th><th>Harga</th><th>Jumlah</th></tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr><td colspan="5" class="num">TOTAL</td><td class="num">${rupiah(inv.total)}</td></tr></tfoot>
+      </table>
+      <div class="sign">
+        <div><div>Hormat Kami,</div><div class="space">( NOTAPEDIA )</div></div>
+        <div><div>Mengetahui / Menerima,</div><div class="space">( ${inv.client_nama} )</div></div>
+      </div>
     </div>`;
-  return docHtml({ css: baseCss, body });
+  return docHtml({ css: baseCss + pageCss.invoice, body });
 }
 
 function htmlTandaTerima(tt) {
@@ -138,24 +192,23 @@ function htmlTandaTerima(tt) {
     )
     .join('');
   const body = `
-    ${headerBlock('TANDA TERIMA', [
-      ['No', tt.no_dokumen],
-      ['Tanggal', tt.tanggal],
-    ])}
-    <div class="meta">
-      <div><strong>Diserahkan oleh:</strong> ${tt.diserahkan_oleh || ''}</div>
-      <div><strong>Diterima oleh:</strong> ${tt.diterima_oleh || '-'}</div>
-    </div>
-    <table>
-      <thead><tr><th>No</th><th>No. Invoice</th><th>No. SBI</th><th>Jumlah</th></tr></thead>
-      <tbody>${rows}</tbody>
-      <tfoot><tr><td colspan="3" class="num">TOTAL</td><td class="num">${rupiah(tt.total)}</td></tr></tfoot>
-    </table>
-    <div class="sign">
-      <div><div>Yang Menyerahkan,</div><div class="space">( ${tt.diserahkan_oleh || '................' } )</div></div>
-      <div><div>Yang Menerima,</div><div class="space">( ${tt.diterima_oleh || '................' } )</div></div>
+    <div class="doc">
+      ${headerBlock('TANDA TERIMA', [`No. ${tt.no_dokumen}`, `Tanggal: ${tt.tanggal}`])}
+      <div class="meta">
+        <div>Diserahkan oleh: ${tt.diserahkan_oleh || ''}</div>
+        <div>Diterima oleh: ${tt.diterima_oleh || '-'}</div>
+      </div>
+      <table>
+        <thead><tr><th>No</th><th>No. Invoice</th><th>No. SBI</th><th>Jumlah</th></tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr><td colspan="3" class="num">TOTAL</td><td class="num">${rupiah(tt.total)}</td></tr></tfoot>
+      </table>
+      <div class="sign">
+        <div><div>Yang Menyerahkan,</div><div class="space">( ${tt.diserahkan_oleh || '................'} )</div></div>
+        <div><div>Yang Menerima,</div><div class="space">( ${tt.diterima_oleh || '................'} )</div></div>
+      </div>
     </div>`;
-  return docHtml({ css: baseCss, body });
+  return docHtml({ css: baseCss + pageCss['tanda-terima'], body });
 }
 
 export function renderDoc(type, data) {
@@ -173,34 +226,33 @@ export function pageSizeFor(type) {
   return { width: 210000, height: 139700 };
 }
 
-export async function printDocument(type, data, { deviceName, silent = true } = {}) {
-  const html = renderDoc(type, data);
-  const win = new BrowserWindow({
-    show: false,
-    webPreferences: { sandbox: true },
+export function printDocument(type, data, { deviceName, silent = true } = {}) {
+  return enqueue(async () => {
+    const html = renderDoc(type, data);
+    const { htmlPath, dir } = prepareDoc(html);
+    const win = getSharedWin();
+    try {
+      await win.loadFile(htmlPath);
+      const pageSize = pageSizeFor(type);
+      const success = await new Promise((resolve) => {
+        win.webContents.print(
+          {
+            silent,
+            printBackground: true,
+            deviceName: deviceName || undefined,
+            pageSize,
+            margins: { marginType: 'none' },
+            landscape: false,
+          },
+          (ok, err) => resolve(ok ? true : err)
+        );
+      });
+      if (success !== true) throw new Error('Gagal mencetak: ' + success);
+      return { ok: true };
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
-
-  try {
-    await win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
-    const pageSize = pageSizeFor(type);
-    const success = await new Promise((resolve) => {
-      win.webContents.print(
-        {
-          silent,
-          printBackground: true,
-          deviceName: deviceName || undefined,
-          pageSize,
-          margins: { marginType: 'none' },
-          landscape: false,
-        },
-        (ok, err) => resolve(ok ? true : err)
-      );
-    });
-    if (success !== true) throw new Error('Gagal mencetak: ' + success);
-    return { ok: true };
-  } finally {
-    win.destroy();
-  }
 }
 
 // ─────────────────────────── LAPORAN (A4) ───────────────────────────
@@ -228,7 +280,7 @@ const reportCss = `
 function reportHeader(judul, periode) {
   return `
     <div class="header">
-      <div class="logo"><img src="${logoDataUrl()}" alt="logo" /></div>
+      <div class="logo"><img src="logo.png" alt="logo" /></div>
       <div class="tgl-cetak">Dicetak: ${new Date().toLocaleString('id-ID')}</div>
     </div>
     <div class="header-line"></div>
@@ -268,7 +320,7 @@ function htmlLaporanBulanan({ bulan, tahun, sj, invoices, totalInvoice }) {
       <tfoot><tr><td colspan="4" class="num">TOTAL BULAN INI</td><td class="num">${rupiah(totalInvoice)}</td><td></td></tr></tfoot>
     </table>
     <div class="footer">Dokumen ini dicetak otomatis dari aplikasi Notapedia — ${periode}</div>`;
-  return docHtml({ css: reportCss, body });
+  return docHtml({ css: reportCss + pageCss['laporan-bulanan'], body });
 }
 
 function htmlRekapPiutang(groups) {
@@ -294,7 +346,7 @@ function htmlRekapPiutang(groups) {
       <tfoot><tr><td colspan="4" class="num">TOTAL PIUTANG</td><td class="num">${rupiah(grand)}</td></tr></tfoot>
     </table>
     <div class="footer">Dokumen ini dicetak otomatis dari aplikasi Notapedia</div>`;
-  return docHtml({ css: reportCss, body });
+  return docHtml({ css: reportCss + pageCss['rekap-piutang'], body });
 }
 
 export function renderReport(type, data) {
@@ -304,31 +356,68 @@ export function renderReport(type, data) {
 }
 
 // Cetak laporan A4. silent=false → dialog cetak muncul (bisa pilih "Microsoft Print to PDF").
-export async function printReport(type, data, { deviceName } = {}) {
-  const html = renderReport(type, data);
-  const win = new BrowserWindow({
-    show: false,
-    webPreferences: { sandbox: true },
+export function printReport(type, data, { deviceName } = {}) {
+  return enqueue(async () => {
+    const html = renderReport(type, data);
+    const { htmlPath, dir } = prepareDoc(html);
+    const win = getSharedWin();
+    try {
+      await win.loadFile(htmlPath);
+      const success = await new Promise((resolve) => {
+        win.webContents.print(
+          {
+            silent: false,
+            printBackground: true,
+            deviceName: deviceName || undefined,
+            pageSize: { width: 210000, height: 297000 },
+            margins: { marginType: 'none' },
+            landscape: false,
+          },
+          (ok, err) => resolve(ok ? true : err)
+        );
+      });
+      if (success !== true) throw new Error('Gagal mencetak: ' + success);
+      return { ok: true };
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
+}
 
-  try {
-    await win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
-    const success = await new Promise((resolve) => {
-      win.webContents.print(
-        {
-          silent: false,
-          printBackground: true,
-          deviceName: deviceName || undefined,
-          pageSize: { width: 210000, height: 297000 },
-          margins: { marginType: 'none' },
-          landscape: false,
-        },
-        (ok, err) => resolve(ok ? true : err)
-      );
-    });
-    if (success !== true) throw new Error('Gagal mencetak: ' + success);
-    return { ok: true };
-  } finally {
-    win.destroy();
-  }
+// Simpan dokumen sebagai PDF dengan ukuran kertas dotmatrix yang tepat.
+// printToPDF + preferCSSPageSize memakai @page dari CSS → ukuran halaman persis
+// (continuous form / setengah A4), tidak jatuh ke A4 seperti lewat dialog printer.
+export function saveDocumentPdf(type, data) {
+  return enqueue(async () => {
+    const html = renderDoc(type, data);
+    const { htmlPath, dir } = prepareDoc(html);
+    const win = getSharedWin();
+    try {
+      await win.loadFile(htmlPath);
+      const pdf = await win.webContents.printToPDF({
+        printBackground: true,
+        preferCSSPageSize: true,
+        margins: { top: 0, bottom: 0, left: 0, right: 0 },
+        pageSize: pdfPageSizeFor(type),
+        landscape: false,
+      });
+      return pdf;
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+}
+
+// Ukuran halaman PDF (inch) sebagai fallback selain CSS @page.
+// - invoice: setengah A4 (148 x 210 mm ≈ 5.83 x 8.27 inch)
+// - SJ / TT: continuous form (210 x 139.7 mm ≈ 8.27 x 5.5 inch)
+export function pdfPageSizeFor(type) {
+  if (type === 'invoice') return { width: 5.83, height: 8.27 };
+  return { width: 8.27, height: 5.5 };
+}
+
+// Nama default file PDF berdasarkan nomor dokumen.
+export function pdfFileNameFor(type, data) {
+  const no = data?.no_sj || data?.no_invoice || data?.no_dokumen || 'dokumen';
+  return `${no}.pdf`;
 }
