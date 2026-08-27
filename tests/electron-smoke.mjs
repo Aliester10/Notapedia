@@ -12,8 +12,9 @@ const { openDb, getDbPath } = await import('../electron/db.js');
 const svc = await import('../electron/services.js');
 const { renderDoc } = await import('../electron/print.js');
 const { renderReport } = await import('../electron/print.js');
+const { saveDocumentPdf } = await import('../electron/print.js');
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   try {
     openDb();
 
@@ -47,9 +48,9 @@ app.whenReady().then(() => {
         const html = renderDoc('sj', { ...svc.getSJ(1), client_nama: 'X' });
         return html.includes('SURAT JALAN') && html.includes('SJ-0001');
       })()],
-      ['print logo tertanam (base64)', (() => {
+      ['print logo referensi (logo.png)', (() => {
         const html = renderDoc('invoice', { ...svc.getInvoice(1), client_nama: 'X' });
-        return html.includes('data:image/png;base64,');
+        return html.includes('src="logo.png"');
       })()],
       ['print render invoice', (() => {
         const html = renderDoc('invoice', { ...svc.getInvoice(1), client_nama: 'X' });
@@ -61,11 +62,11 @@ app.whenReady().then(() => {
       })()],
       ['print render laporan bulanan (A4 + logo)', (() => {
         const html = renderReport('laporan-bulanan', { bulan: 'Agustus', tahun: 2026, ...svc.laporanBulanan(8, 2026) });
-        return html.includes('LAPORAN BULANAN') && html.includes('data:image/png;base64,') && html.includes('TOTAL BULAN INI');
+        return html.includes('LAPORAN BULANAN') && html.includes('src="logo.png"') && html.includes('TOTAL BULAN INI');
       })()],
       ['print render rekap piutang (A4 + logo)', (() => {
         const html = renderReport('rekap-piutang', svc.rekapPiutang());
-        return html.includes('REKAP PIUTANG') && html.includes('data:image/png;base64,') && html.includes('TOTAL PIUTANG');
+        return html.includes('REKAP PIUTANG') && html.includes('src="logo.png"') && html.includes('TOTAL PIUTANG');
       })()],
       ['laporan bulanan', svc.laporanBulanan(8, 2026).totalInvoice > 0],
       ['backup/restore', (() => {
@@ -74,6 +75,17 @@ app.whenReady().then(() => {
         return svc.listPO().length === 5;
       })()],
     ];
+
+    // PDF dotmatrix: ukuran kertas harus continuous form / setengah A4, bukan A4.
+    const sjPdf = await saveDocumentPdf('sj', { ...svc.getSJ(1), client_nama: 'X' });
+    const invPdf = await saveDocumentPdf('invoice', { ...svc.getInvoice(1), client_nama: 'X' });
+    const sjSize = pdfMediaBox(sjPdf);
+    const invSize = pdfMediaBox(invPdf);
+    checks.push(
+      ['pdf: diawali %PDF', Buffer.isBuffer(sjPdf) && sjPdf.slice(0, 4).toString() === '%PDF'],
+      ['pdf: SJ ukuran continuous form (595x396 pt)', sjSize && Math.round(sjSize[0]) === 595 && Math.round(sjSize[1]) === 396, JSON.stringify(sjSize)],
+      ['pdf: invoice ukuran setengah A4 (420x595 pt)', invSize && Math.round(invSize[0]) === 420 && Math.round(invSize[1]) === 595, JSON.stringify(invSize)]
+    );
 
     let fail = 0;
     for (const [label, ok] of checks) {
@@ -87,3 +99,11 @@ app.whenReady().then(() => {
     app.exit(1);
   }
 });
+
+// Ambil ukuran halaman (width, height dalam pt) dari MediaBox PDF.
+function pdfMediaBox(buf) {
+  const s = buf.toString('latin1');
+  const m = s.match(/\/MediaBox\s*\[\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\]/);
+  if (!m) return null;
+  return [Number(m[3]), Number(m[4])];
+}
