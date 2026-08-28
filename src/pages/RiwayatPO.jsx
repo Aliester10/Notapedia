@@ -4,7 +4,7 @@ import { Search, ChevronRight, BookText } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import StatusBadge from '../components/StatusBadge';
 import { listPO } from '../data/api';
-import { formatDate, formatNumber } from '../data/mockData';
+import { formatDate, formatNumber, sisaItem } from '../data/mockData';
 
 export default function RiwayatPO() {
   const [poList, setPoList] = useState([]);
@@ -43,7 +43,7 @@ export default function RiwayatPO() {
 
       <div className="space-y-3">
         {hasil.map((po) => {
-          const totalSisa = po.items.reduce((s, it) => s + (it.qty_pesan - it.qty_terkirim), 0);
+          const totalSisa = po.items.reduce((s, it) => s + sisaItem(it), 0);
           return (
             <Link
               key={po.id}

@@ -122,26 +122,26 @@ export default function InvoiceList() {
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500 border-b border-slate-200">
             <tr>
-              <th className="px-4 py-3 text-left font-medium">No Invoice</th>
-              <th className="px-4 py-3 text-left font-medium">No PO / SJ</th>
+              <th className="px-4 py-3 text-center font-medium">No Invoice</th>
+              <th className="px-4 py-3 text-center font-medium">No PO</th>
+              <th className="px-4 py-3 text-center font-medium">No SJ</th>
               <th className="px-4 py-3 text-left font-medium">Client</th>
               <th className="px-4 py-3 text-left font-medium">Tgl Invoice</th>
-              <th className="px-4 py-3 text-right font-medium">Total</th>
-              <th className="px-4 py-3 text-left font-medium">Status</th>
+              <th className="px-4 py-3 text-center font-medium">Total</th>
+              <th className="px-4 py-3 text-center font-medium">Status</th>
               <th className="px-4 py-3 text-right font-medium w-24">Aksi</th>
             </tr>
           </thead>
           <tbody>
             {hasil.map((inv) => (
               <tr key={inv.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
-                <td className="px-4 py-3 font-medium text-slate-800">{inv.no_invoice}</td>
-                <td className="px-4 py-3 text-slate-600">
-                  {inv.no_po}<span className="text-slate-400"> · </span>{inv.no_sj}
-                </td>
+                <td className="px-4 py-3 font-medium text-center text-slate-800">{inv.no_invoice}</td>
+                <td className="px-4 py-3 text-center text-slate-600">{inv.no_po}</td>
+                <td className="px-4 py-3 text-center text-slate-600">{inv.no_sj}</td>
                 <td className="px-4 py-3 text-slate-600">{inv.client_nama}</td>
                 <td className="px-4 py-3 text-slate-600">{formatDate(inv.tanggal_invoice)}</td>
-                <td className="px-4 py-3 text-right font-semibold text-slate-800">{formatRupiah(inv.total)}</td>
-                <td className="px-4 py-3"><StatusBadge status={inv.status} /></td>
+                <td className="px-4 py-3 text-center font-semibold text-slate-800">{formatRupiah(inv.total)}</td>
+                <td className="px-4 py-3 text-center"><StatusBadge status={inv.status} /></td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-1">
                     <button
@@ -165,7 +165,7 @@ export default function InvoiceList() {
               </tr>
             ))}
             {hasil.length === 0 && (
-              <tr><td colSpan={7} className="py-6 text-center text-sm text-slate-500">Tidak ada invoice yang cocok.</td></tr>
+              <tr><td colSpan={8} className="py-6 text-center text-sm text-slate-500">Tidak ada invoice yang cocok.</td></tr>
             )}
           </tbody>
         </table>

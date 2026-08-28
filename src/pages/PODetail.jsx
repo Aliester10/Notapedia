@@ -4,7 +4,7 @@ import { ChevronLeft, Printer, Truck, Receipt, Pencil } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import StatusBadge from '../components/StatusBadge';
 import { getRiwayatPO } from '../data/api';
-import { formatDate, formatNumber } from '../data/mockData';
+import { formatDate, formatNumber, sisaItem } from '../data/mockData';
 
 export default function PODetail() {
   const { id } = useParams();
@@ -63,7 +63,7 @@ export default function PODetail() {
             </thead>
             <tbody>
               {po.items.map((it) => {
-                const sisa = it.qty_pesan - it.qty_terkirim;
+                const sisa = sisaItem(it);
                 return (
                   <tr key={it.id} className="border-b border-slate-100 last:border-0">
                     <td className="py-3 font-medium text-slate-800">{it.nama_barang}</td>
@@ -125,11 +125,11 @@ export default function PODetail() {
           <table className="w-full text-sm">
             <thead className="text-xs text-slate-500 border-b border-slate-200">
               <tr>
-                <th className="text-left py-2 font-medium">No SJ</th>
+                <th className="text-center py-2 font-medium">No SJ</th>
                 <th className="text-left py-2 font-medium">Tanggal Kirim</th>
                 <th className="text-left py-2 font-medium">Pengirim</th>
                 <th className="text-right py-2 font-medium">Retur</th>
-                <th className="text-left py-2 font-medium">Status</th>
+                <th className="text-center py-2 font-medium">Status</th>
                 <th className="text-right py-2 font-medium w-20">Aksi</th>
               </tr>
             </thead>
@@ -138,7 +138,7 @@ export default function PODetail() {
                 const totalRetur = sj.retur_total ?? 0;
                 return (
                   <tr key={sj.id} className="border-b border-slate-100 last:border-0">
-                    <td className="py-3 font-medium text-slate-800">{sj.no_sj}</td>
+                    <td className="py-3 font-medium text-center text-slate-800">{sj.no_sj}</td>
                     <td className="py-3 text-slate-600">{formatDate(sj.tanggal_kirim)}</td>
                     <td className="py-3 text-slate-600">{sj.nama_pengirim}</td>
                     <td className="py-3 text-right">
@@ -148,7 +148,7 @@ export default function PODetail() {
                         <span className="text-slate-400">-</span>
                       )}
                     </td>
-                    <td className="py-3"><StatusBadge status={sj.status} /></td>
+                    <td className="py-3 text-center"><StatusBadge status={sj.status} /></td>
                     <td className="py-3 text-right">
                       <Link to={`/surat-jalan/${sj.id}`} className="text-brand-600 hover:underline text-xs">Detail</Link>
                     </td>
@@ -168,19 +168,19 @@ export default function PODetail() {
           <table className="w-full text-sm">
             <thead className="text-xs text-slate-500 border-b border-slate-200">
               <tr>
-                <th className="text-left py-2 font-medium">No Invoice</th>
-                <th className="text-left py-2 font-medium">No SJ</th>
+                <th className="text-center py-2 font-medium">No Invoice</th>
+                <th className="text-center py-2 font-medium">No SJ</th>
                 <th className="text-left py-2 font-medium">Tanggal</th>
-                <th className="text-left py-2 font-medium">Status</th>
+                <th className="text-center py-2 font-medium">Status</th>
               </tr>
             </thead>
             <tbody>
               {invTerbaru.map((inv) => (
                 <tr key={inv.id} className="border-b border-slate-100 last:border-0">
-                  <td className="py-3 font-medium text-slate-800">{inv.no_invoice}</td>
-                  <td className="py-3 text-slate-600">{inv.no_sj}</td>
+                  <td className="py-3 font-medium text-center text-slate-800">{inv.no_invoice}</td>
+                  <td className="py-3 text-center text-slate-600">{inv.no_sj}</td>
                   <td className="py-3 text-slate-600">{formatDate(inv.tanggal_invoice)}</td>
-                  <td className="py-3"><StatusBadge status={inv.status} /></td>
+                  <td className="py-3 text-center"><StatusBadge status={inv.status} /></td>
                 </tr>
               ))}
             </tbody>

@@ -127,19 +127,19 @@ export default function Dashboard() {
           <table className="w-full text-sm">
             <thead className="text-xs text-slate-500 border-b border-slate-200">
               <tr>
-                <th className="text-left py-2 font-medium">No Invoice</th>
+                <th className="text-center py-2 font-medium">No Invoice</th>
                 <th className="text-left py-2 font-medium">Client</th>
-                <th className="text-right py-2 font-medium">Total</th>
-                <th className="text-right py-2 font-medium">Status</th>
+                <th className="text-center py-2 font-medium">Total</th>
+                <th className="text-center py-2 font-medium">Status</th>
               </tr>
             </thead>
             <tbody>
               {unpaid.map((inv) => (
                 <tr key={inv.id} className="border-b border-slate-100 last:border-0">
-                  <td className="py-3 font-medium text-slate-800">{inv.no_invoice}</td>
+                  <td className="py-3 font-medium text-center text-slate-800">{inv.no_invoice}</td>
                   <td className="py-3 text-slate-600">{inv.client_nama}</td>
-                  <td className="py-3 text-right font-medium">{formatRupiah(inv.total)}</td>
-                  <td className="py-3 text-right"><StatusBadge status={inv.status} /></td>
+                  <td className="py-3 text-center font-medium">{formatRupiah(inv.total)}</td>
+                  <td className="py-3 text-center"><StatusBadge status={inv.status} /></td>
                 </tr>
               ))}
             </tbody>

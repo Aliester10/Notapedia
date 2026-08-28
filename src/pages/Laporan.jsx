@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
-  Printer, FileSpreadsheet, Database, Wallet, Truck, HardDriveDownload, Trash2, RotateCcw,
+  Printer, FileSpreadsheet, Database, Wallet, Truck, HardDriveDownload, Trash2, RotateCcw, Search
 } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import StatusBadge from '../components/StatusBadge';
@@ -200,71 +201,47 @@ export default function Laporan() {
           </div>
 
           <div className="card p-5 mb-6">
-            <h3 className="font-semibold text-slate-900 mb-3">Daftar Surat Jalan</h3>
+            <h3 className="font-semibold text-slate-900 mb-3">LAPORAN</h3>
             <table className="w-full text-sm">
-              <thead className="text-xs text-slate-500 border-b border-slate-200">
+               <thead className="text-xs text-slate-500 border-b border-slate-200">
                 <tr>
-                  <th className="text-left py-2 font-medium">No SJ</th>
-                  <th className="text-left py-2 font-medium">Tanggal</th>
-                  <th className="text-left py-2 font-medium">No PO</th>
-                  <th className="text-left py-2 font-medium">Client</th>
-                  <th className="text-left py-2 font-medium">Status</th>
+                  <th className="text-center py-2 font-medium">No PO</th>
+                  <th className="text-left py-2 font-medium">Tanggal PO</th>
+                  <th className="text-center py-2 font-medium">No SJ</th>
+                  <th className="text-left py-2 font-medium">Tanggal SJ</th>
+                  <th className="text-center py-2 font-medium">No Invoice</th>
+                  <th className="text-left py-2 font-medium">Tgl Invoice</th>
+                  <th className="text-center py-2 font-medium">Jumlah</th>
+                  <th className="w-10"></th>
                 </tr>
               </thead>
               <tbody>
                 {(dataBulanan?.sj ?? []).map((sj) => (
                   <tr key={sj.id} className="border-b border-slate-100 last:border-0">
-                    <td className="py-3 font-medium text-slate-800">{sj.no_sj}</td>
+                    <td className="py-3 text-center text-slate-600">{sj.no_po}</td>
+                    <td className="py-3 text-slate-600">{formatDate(sj.tanggal_po)}</td>
+                    <td className="py-3 font-medium text-center text-slate-800">{sj.no_sj}</td>
                     <td className="py-3 text-slate-600">{formatDate(sj.tanggal_kirim)}</td>
-                    <td className="py-3 text-slate-600">{sj.no_po}</td>
-                    <td className="py-3 text-slate-600">{sj.client_nama}</td>
-                    <td className="py-3"><StatusBadge status={sj.status} /></td>
+                    <td className="py-3 text-center text-slate-600">{sj.no_invoice || '-'}</td>
+                    <td className="py-3 text-slate-600">{sj.tanggal_invoice ? formatDate(sj.tanggal_invoice) : '-'}</td>
+                    <td className="py-3 text-center text-slate-800">
+                      {sj.jumlah_invoice ? formatRupiah(sj.jumlah_invoice) : '-'}
+                    </td>
+                    <td className="py-3 text-center">
+                      <Link to={`/surat-jalan/${sj.id}`} className="inline-flex items-center gap-1 text-brand-600 hover:text-brand-700 font-medium text-xs">
+                        <Search className="h-4 w-4" /> Detail
+                      </Link>
+                    </td>
                   </tr>
                 ))}
                 {!dataBulanan?.sj?.length && (
-                  <tr><td colSpan={5} className="py-4 text-center text-sm text-slate-500">Tidak ada Surat Jalan pada periode ini.</td></tr>
+                  <tr><td colSpan={8} className="py-4 text-center text-sm text-slate-500">Tidak ada Surat Jalan pada periode ini.</td></tr>
                 )}
               </tbody>
             </table>
           </div>
 
-          <div className="card p-5">
-            <h3 className="font-semibold text-slate-900 mb-3">Daftar Invoice</h3>
-            <table className="w-full text-sm">
-              <thead className="text-xs text-slate-500 border-b border-slate-200">
-                <tr>
-                  <th className="text-left py-2 font-medium">No Invoice</th>
-                  <th className="text-left py-2 font-medium">Tanggal</th>
-                  <th className="text-left py-2 font-medium">Client</th>
-                  <th className="text-right py-2 font-medium">Total</th>
-                  <th className="text-left py-2 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(dataBulanan?.invoices ?? []).map((inv) => (
-                  <tr key={inv.id} className="border-b border-slate-100 last:border-0">
-                    <td className="py-3 font-medium text-slate-800">{inv.no_invoice}</td>
-                    <td className="py-3 text-slate-600">{formatDate(inv.tanggal_invoice)}</td>
-                    <td className="py-3 text-slate-600">{inv.client_nama}</td>
-                    <td className="py-3 text-right font-semibold text-slate-800">{formatRupiah(inv.total)}</td>
-                    <td className="py-3"><StatusBadge status={inv.status} /></td>
-                  </tr>
-                ))}
-                {!dataBulanan?.invoices?.length && (
-                  <tr><td colSpan={5} className="py-4 text-center text-sm text-slate-500">Tidak ada Invoice pada periode ini.</td></tr>
-                )}
-              </tbody>
-              <tfoot className="bg-slate-50">
-                <tr>
-                  <td colSpan={3} className="px-3 py-3 text-right font-semibold text-slate-700">Total Bulan Ini</td>
-                  <td className="px-3 py-3 text-right font-bold text-brand-700">
-                    {formatRupiah(dataBulanan?.totalInvoice ?? 0)}
-                  </td>
-                  <td></td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+
         </div>
       )}
 
@@ -293,19 +270,19 @@ export default function Laporan() {
                 <table className="w-full text-sm">
                   <thead className="text-xs text-slate-500">
                     <tr>
-                      <th className="text-left px-4 py-2 font-medium">No Invoice</th>
+                      <th className="text-center px-4 py-2 font-medium">No Invoice</th>
                       <th className="text-left px-4 py-2 font-medium">Tanggal</th>
-                      <th className="text-left px-4 py-2 font-medium">Status</th>
-                      <th className="text-right px-4 py-2 font-medium">Nilai</th>
+                      <th className="text-center px-4 py-2 font-medium">Status</th>
+                      <th className="text-center px-4 py-2 font-medium">Nilai</th>
                     </tr>
                   </thead>
                   <tbody>
                     {g.invoices.map((inv) => (
                       <tr key={inv.id} className="border-t border-slate-200">
-                        <td className="px-4 py-2 font-medium text-slate-800">{inv.no_invoice}</td>
+                        <td className="px-4 py-2 font-medium text-center text-slate-800">{inv.no_invoice}</td>
                         <td className="px-4 py-2 text-slate-600">{formatDate(inv.tanggal_invoice)}</td>
-                        <td className="px-4 py-2"><StatusBadge status={inv.status} /></td>
-                        <td className="px-4 py-2 text-right font-semibold text-slate-800">{formatRupiah(inv.total)}</td>
+                        <td className="px-4 py-2 text-center"><StatusBadge status={inv.status} /></td>
+                        <td className="px-4 py-2 text-center font-semibold text-slate-800">{formatRupiah(inv.total)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -396,62 +373,39 @@ export default function Laporan() {
 
           {tab !== 'piutang' && (
             <div className="mt-4">
-              <div className="text-xs font-semibold mb-1">1. Daftar Surat Jalan</div>
+              <div className="text-xs font-semibold mb-1">LAPORAN</div>
               <table className="w-full border-collapse text-xs">
                 <thead>
                   <tr className="bg-slate-100">
                     <th className="border border-slate-500 px-1.5 py-1 text-left">No</th>
-                    <th className="border border-slate-500 px-1.5 py-1 text-left">No SJ</th>
-                    <th className="border border-slate-500 px-1.5 py-1 text-left">Tanggal</th>
-                    <th className="border border-slate-500 px-1.5 py-1 text-left">No PO</th>
-                    <th className="border border-slate-500 px-1.5 py-1 text-left">Client</th>
-                    <th className="border border-slate-500 px-1.5 py-1 text-left">Status</th>
+                    <th className="border border-slate-500 px-1.5 py-1 text-center">No PO</th>
+                    <th className="border border-slate-500 px-1.5 py-1 text-left">Tanggal PO</th>
+                    <th className="border border-slate-500 px-1.5 py-1 text-center">No SJ</th>
+                    <th className="border border-slate-500 px-1.5 py-1 text-left">Tanggal SJ</th>
+                    <th className="border border-slate-500 px-1.5 py-1 text-center">No Invoice</th>
+                    <th className="border border-slate-500 px-1.5 py-1 text-left">Tgl Invoice</th>
+                    <th className="border border-slate-500 px-1.5 py-1 text-center">Jumlah</th>
                   </tr>
                 </thead>
                 <tbody>
                   {(dataBulanan?.sj ?? []).map((sj, i) => (
                     <tr key={sj.id}>
                       <td className="border border-slate-500 px-1.5 py-1">{i + 1}</td>
-                      <td className="border border-slate-500 px-1.5 py-1">{sj.no_sj}</td>
+                      <td className="border border-slate-500 px-1.5 py-1 text-center">{sj.no_po}</td>
+                      <td className="border border-slate-500 px-1.5 py-1">{formatDate(sj.tanggal_po)}</td>
+                      <td className="border border-slate-500 px-1.5 py-1 text-center">{sj.no_sj}</td>
                       <td className="border border-slate-500 px-1.5 py-1">{formatDate(sj.tanggal_kirim)}</td>
-                      <td className="border border-slate-500 px-1.5 py-1">{sj.no_po}</td>
-                      <td className="border border-slate-500 px-1.5 py-1">{sj.client_nama}</td>
-                      <td className="border border-slate-500 px-1.5 py-1">{sj.status}</td>
+                      <td className="border border-slate-500 px-1.5 py-1 text-center">{sj.no_invoice || '-'}</td>
+                      <td className="border border-slate-500 px-1.5 py-1">{sj.tanggal_invoice ? formatDate(sj.tanggal_invoice) : '-'}</td>
+                      <td className="border border-slate-500 px-1.5 py-1 text-center">
+                        {sj.jumlah_invoice ? formatRupiah(sj.jumlah_invoice) : '-'}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
 
-              <div className="text-xs font-semibold mb-1 mt-4">2. Daftar Invoice</div>
-              <table className="w-full border-collapse text-xs">
-                <thead>
-                  <tr className="bg-slate-100">
-                    <th className="border border-slate-500 px-1.5 py-1 text-left">No</th>
-                    <th className="border border-slate-500 px-1.5 py-1 text-left">No Invoice</th>
-                    <th className="border border-slate-500 px-1.5 py-1 text-left">Tanggal</th>
-                    <th className="border border-slate-500 px-1.5 py-1 text-left">Client</th>
-                    <th className="border border-slate-500 px-1.5 py-1 text-right">Total</th>
-                    <th className="border border-slate-500 px-1.5 py-1 text-left">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(dataBulanan?.invoices ?? []).map((inv, i) => (
-                    <tr key={inv.id}>
-                      <td className="border border-slate-500 px-1.5 py-1">{i + 1}</td>
-                      <td className="border border-slate-500 px-1.5 py-1">{inv.no_invoice}</td>
-                      <td className="border border-slate-500 px-1.5 py-1">{formatDate(inv.tanggal_invoice)}</td>
-                      <td className="border border-slate-500 px-1.5 py-1">{inv.client_nama}</td>
-                      <td className="border border-slate-500 px-1.5 py-1 text-right font-semibold">{formatRupiah(inv.total)}</td>
-                      <td className="border border-slate-500 px-1.5 py-1">{inv.status}</td>
-                    </tr>
-                  ))}
-                  <tr className="bg-slate-100 font-semibold">
-                    <td colSpan={4} className="border border-slate-500 px-1.5 py-1 text-right">TOTAL BULAN INI</td>
-                    <td className="border border-slate-500 px-1.5 py-1 text-right">{formatRupiah(dataBulanan?.totalInvoice ?? 0)}</td>
-                    <td className="border border-slate-500 px-1.5 py-1"></td>
-                  </tr>
-                </tbody>
-              </table>
+
             </div>
           )}
 
@@ -465,19 +419,19 @@ export default function Laporan() {
                         <th className="border border-slate-500 px-1.5 py-1 text-left" colSpan={4}>Client: {g.client_nama}</th>
                       </tr>
                       <tr>
-                        <th className="border border-slate-500 px-1.5 py-1 text-left">No Invoice</th>
+                        <th className="border border-slate-500 px-1.5 py-1 text-center">No Invoice</th>
                         <th className="border border-slate-500 px-1.5 py-1 text-left">Tanggal</th>
-                        <th className="border border-slate-500 px-1.5 py-1 text-left">Status</th>
-                        <th className="border border-slate-500 px-1.5 py-1 text-right">Nilai</th>
+                        <th className="border border-slate-500 px-1.5 py-1 text-center">Status</th>
+                        <th className="border border-slate-500 px-1.5 py-1 text-center">Nilai</th>
                       </tr>
                     </thead>
                     <tbody>
                       {g.invoices.map((inv) => (
                         <tr key={inv.id}>
-                          <td className="border border-slate-500 px-1.5 py-1">{inv.no_invoice}</td>
+                          <td className="border border-slate-500 px-1.5 py-1 text-center">{inv.no_invoice}</td>
                           <td className="border border-slate-500 px-1.5 py-1">{formatDate(inv.tanggal_invoice)}</td>
-                          <td className="border border-slate-500 px-1.5 py-1">{inv.status}</td>
-                          <td className="border border-slate-500 px-1.5 py-1 text-right">{formatRupiah(inv.total)}</td>
+                          <td className="border border-slate-500 px-1.5 py-1 text-center">{inv.status}</td>
+                          <td className="border border-slate-500 px-1.5 py-1 text-center">{formatRupiah(inv.total)}</td>
                         </tr>
                       ))}
                       <tr className="bg-slate-100 font-semibold">

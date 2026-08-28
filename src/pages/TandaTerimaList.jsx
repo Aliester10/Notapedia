@@ -59,7 +59,7 @@ export default function TandaTerimaList() {
               <th className="px-4 py-3 text-left font-medium">Diserahkan Oleh</th>
               <th className="px-4 py-3 text-left font-medium">Diterima Oleh</th>
               <th className="px-4 py-3 text-center font-medium w-20">Invoice</th>
-              <th className="px-4 py-3 text-right font-medium">Total</th>
+              <th className="px-4 py-3 text-center font-medium">Total</th>
               <th className="px-4 py-3 text-right font-medium w-16">Aksi</th>
             </tr>
           </thead>
@@ -71,7 +71,7 @@ export default function TandaTerimaList() {
                 <td className="px-4 py-3 text-slate-600">{tt.diserahkan_oleh}</td>
                 <td className="px-4 py-3 text-slate-600">{tt.diterima_oleh}</td>
                 <td className="px-4 py-3 text-center text-slate-600">{tt.items.length}</td>
-                <td className="px-4 py-3 text-right font-semibold text-slate-800">{formatRupiah(tt.total)}</td>
+                <td className="px-4 py-3 text-center font-semibold text-slate-800">{formatRupiah(tt.total)}</td>
                 <td className="px-4 py-3 text-right">
                   <button
                     className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-brand-600"
@@ -99,17 +99,17 @@ export default function TandaTerimaList() {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-xs text-slate-500">
                 <tr>
-                  <th className="text-left px-3 py-2 font-medium">No Invoice</th>
+                  <th className="text-center px-3 py-2 font-medium">No Invoice</th>
                   <th className="text-left px-3 py-2 font-medium">Client</th>
-                  <th className="text-right px-3 py-2 font-medium w-32">Nilai</th>
+                  <th className="text-center px-3 py-2 font-medium w-32">Nilai</th>
                 </tr>
               </thead>
               <tbody>
                 {invoicesSiap.map((inv) => (
                   <tr key={inv.id} className="border-t border-slate-200">
-                    <td className="px-3 py-2 font-medium text-slate-800">{inv.no_invoice}</td>
+                    <td className="px-3 py-2 font-medium text-center text-slate-800">{inv.no_invoice}</td>
                     <td className="px-3 py-2 text-slate-600">{inv.client_nama}</td>
-                    <td className="px-3 py-2 text-right font-semibold text-slate-800">{formatRupiah(inv.total)}</td>
+                    <td className="px-3 py-2 text-center font-semibold text-slate-800">{formatRupiah(inv.total)}</td>
                   </tr>
                 ))}
               </tbody>

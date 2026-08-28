@@ -132,8 +132,9 @@ export default function SJDetail() {
               <tr>
                 <th className="text-left py-2 font-medium">Nama Barang</th>
                 <th className="text-right py-2 font-medium w-24">Qty Kirim</th>
-                <th className="text-right py-2 font-medium w-24">Qty Diterima</th>
+                <th className="text-right py-2 font-medium w-24">Qty diterima client</th>
                 <th className="text-right py-2 font-medium w-20">Berat (kg)</th>
+                <th className="text-left py-2 font-medium">Keterangan</th>
               </tr>
             </thead>
             <tbody>
@@ -150,6 +151,9 @@ export default function SJDetail() {
                   </td>
                   <td className="py-3 text-right text-slate-600">
                     {it.berat > 0 ? formatNumber(it.berat) : '-'}
+                  </td>
+                  <td className="py-3 text-slate-600">
+                    {it.keterangan || '-'}
                   </td>
                 </tr>
               ))}
@@ -220,7 +224,7 @@ export default function SJDetail() {
               <tr>
                 <th className="text-left px-3 py-2 font-medium">Nama Barang</th>
                 <th className="text-right px-3 py-2 font-medium w-24">Qty Kirim</th>
-                <th className="text-right px-3 py-2 font-medium w-28">Qty Diterima</th>
+                <th className="text-right px-3 py-2 font-medium w-28">Qty diterima client</th>
                 <th className="text-right px-3 py-2 font-medium w-28">Qty Ditolak</th>
               </tr>
             </thead>

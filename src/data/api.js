@@ -89,7 +89,18 @@ export const getLaporanBulanan = (bulan, tahun) =>
     ? call(window.notapedia.laporan.bulanan, bulan, tahun)
     : Promise.resolve({
         po: mockPO,
-        sj: mockSJ,
+        sj: mockSJ.map((s) => {
+          const inv = mockInvoice.find((i) => i.sj_id === s.id);
+          const po = mockPO.find((p) => p.id === s.po_id);
+          return { 
+            ...s, 
+            no_po: po?.no_po,
+            tanggal_po: po?.tanggal_po,
+            no_invoice: inv?.no_invoice ?? null, 
+            tanggal_invoice: inv?.tanggal_invoice ?? null,
+            jumlah_invoice: inv?.total ?? null 
+          };
+        }),
         invoices: mockInvoice,
         totalInvoice: mockInvoice.reduce((s, i) => s + i.total, 0),
       });
