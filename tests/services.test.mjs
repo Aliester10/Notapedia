@@ -33,6 +33,17 @@ const sjBaru = svc.createSJ({
 });
 check('sj: no otomatis', sjBaru.no_sj === 'SJ-0006', sjBaru.no_sj);
 check('sj: qty_terkirim belum bertambah', svc.getPO(5).items.find((i) => i.id === 9).qty_terkirim === 0);
+check('sj: sisa berkurang saat SJ terbit (qty_sj=25)', svc.getPO(5).items.find((i) => i.id === 9).qty_sj === 25);
+
+// ── SJ kedua melebihi sisa (sisa sudah dipakai SJ terbit) ditolak ──
+let errSisa2 = null;
+try {
+  svc.createSJ({
+    po_id: 5, tanggal_kirim: '2026-08-28', nama_pengirim: 'Tester', catatan: '',
+    items: [{ po_item_id: 9, nama_barang: 'Pipa PVC 4 inch', qty_kirim: 1, berat: 0 }],
+  });
+} catch (e) { errSisa2 = e.message; }
+check('sj: SJ kedua melebihi sisa ditolak', !!errSisa2 && errSisa2.includes('melebihi sisa'), errSisa2 || '');
 
 // ── SJ melebihi sisa PO ditolak ──
 let errQty = null;
@@ -74,6 +85,15 @@ try {
   svc.confirmSJ(sjBaru2.id, { items: [{ sj_item_id: svc.getSJ(sjBaru2.id).items[0].id, qty_diterima: 0, qty_ditolak: 5 }], alasan: '' });
 } catch (e) { errAlasan = e.message; }
 check('sj: retur wajib alasan', !!errAlasan && errAlasan.includes('Alasan penolakan'), errAlasan || '');
+
+// ── Konfirmasi ditolak penuh (dengan alasan) → sisa kembali ke PO ──
+const sjBaru2Detail = svc.getSJ(sjBaru2.id);
+const sjBaru2Setelah = svc.confirmSJ(sjBaru2.id, {
+  items: [{ sj_item_id: sjBaru2Detail.items[0].id, qty_diterima: 0, qty_ditolak: 5 }],
+  alasan: 'Barang rusak saat tiba',
+});
+check('sj: ditolak penuh', sjBaru2Setelah.status === 'Ditolak', sjBaru2Setelah.status);
+check('po: sisa kembali setelah ditolak (qty_sj=0)', svc.getPO(5).items.find((i) => i.id === 9).qty_sj === 0);
 
 // ── PO Selesai saat semua terkirim ──
 const sjP2 = svc.createSJ({
@@ -174,6 +194,7 @@ check('tt: tanpa invoice ditolak', !!errTT);
 // ── Laporan & piutang ──
 const lap = svc.laporanBulanan(8, 2026);
 check('laporan: bulanan berisi data', lap.sj.length >= 5 && lap.invoices.length >= 4 && lap.totalInvoice > 0);
+check('laporan: SJ punya No Invoice & Jumlah', lap.sj.every((s) => 'no_invoice' in s && 'jumlah_invoice' in s));
 const piutang = svc.rekapPiutang();
 check('piutang: terkelompok per client', piutang.length > 0 && piutang.every((g) => g.total > 0));
 
