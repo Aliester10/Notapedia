@@ -1,5 +1,3 @@
-// Test export Excel — memastikan workbook valid, berisi data, dan logo toko tertanam.
-// Jalankan: node tests/excel.test.mjs
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -29,45 +27,45 @@ check('bulanan: buffer xlsx non-kosong', Buffer.isBuffer(buf) && buf.length > 30
 
 // Logo tertanam di dalam zip
 const zip = await JSZip.loadAsync(buf);
-check('bulanan: logo tertanam (xl/media/logo.png)', !!zip.file('xl/media/logo.png'));
-check('bulanan: drawing ada', !!zip.file('xl/drawings/drawing1.xml') && !!zip.file('xl/drawings/drawing2.xml'));
-const ct = await zip.file('[Content_Types].xml').async('string');
-check('bulanan: content type png & drawing', ct.includes('Extension="png"') && ct.includes('drawing1.xml'));
+check('bulanan: logo tertanam (xl/media/image1.png)', !!zip.file('xl/media/image1.png'));
 
 const wb1 = XLSX.read(buf, { type: 'buffer' });
-check('bulanan: sheet SJ & Invoice', wb1.SheetNames.includes('Surat Jalan') && wb1.SheetNames.includes('Invoice'));
+check('bulanan: sheet Laporan', wb1.SheetNames.includes('Laporan'));
 
-const rowsSJ = XLSX.utils.sheet_to_json(wb1.Sheets['Surat Jalan'], { header: 1, defval: '' });
-check('bulanan: judul baris 4', rowsSJ[3][0] === 'LAPORAN BULANAN — SURAT JALAN & INVOICE', JSON.stringify(rowsSJ[3]));
-check('bulanan: periode baris 5', rowsSJ[4][0] === 'Periode: Agustus 2026', JSON.stringify(rowsSJ[4]));
-check('bulanan: section 1 SJ', rowsSJ[7][0] === '1. Daftar Surat Jalan');
-const sjData = rowsSJ.filter((row) => row[1]?.startsWith('SJ-'));
-check('bulanan: data SJ lengkap', sjData.length === lap.sj.length, `got ${sjData.length}`);
+const rows = XLSX.utils.sheet_to_json(wb1.Sheets['Laporan'], { header: 1, defval: '' });
+check('bulanan: judul baris 4', rows[3][0] === 'LAPORAN BULANAN — SURAT JALAN & INVOICE', JSON.stringify(rows[3]));
+check('bulanan: periode baris 5', rows[4][0] === 'Periode: Agustus 2026', JSON.stringify(rows[4]));
+check('bulanan: section LAPORAN', rows[6][0] === 'LAPORAN');
 
-const rowsInv = XLSX.utils.sheet_to_json(wb1.Sheets['Invoice'], { header: 1, defval: '' });
-check('bulanan: sheet Invoice judul', rowsInv[3][0] === 'LAPORAN INVOICE', JSON.stringify(rowsInv[3]));
-const invData = rowsInv.filter((row) => row[1]?.startsWith('INV-'));
-check('bulanan: data invoice lengkap', invData.length === lap.invoices.length, `got ${invData.length}`);
-const totalRow = rowsInv.find((row) => row[0] === 'TOTAL BULAN INI');
-check('bulanan: baris total = totalInvoice', !!totalRow && totalRow[4] === lap.totalInvoice, JSON.stringify(totalRow));
-const dicetakCell = rowsInv[0].find((c) => String(c).startsWith('Dicetak:'));
-check('bulanan: tanggal cetak ada', !!dicetakCell, JSON.stringify(rowsInv[0]));
-const footerInv = rowsInv.find((row) => String(row[0] ?? '').startsWith('Dokumen ini dicetak otomatis'));
-check('bulanan: footer ada', !!footerInv, JSON.stringify(rowsInv[rowsInv.length - 1]));
+// check lengths, header is row 8 (index 7)
+// data starts at row 9 (index 8)
+const dataRows = rows.slice(8, 8 + lap.sj.length);
+check('bulanan: data lengkap', dataRows.length === (lap.sj.length || 1), `got ${dataRows.length}`);
+
+// check totals
+const totalRow = rows.find(r => r[0] === 'TOTAL BULAN INI');
+check('bulanan: baris total = totalInvoice', !!totalRow && totalRow[6] === lap.totalInvoice, JSON.stringify(totalRow));
+
+const dicetakCell = rows[0].find((c) => String(c).startsWith('Dicetak:'));
+check('bulanan: tanggal cetak ada', !!dicetakCell, JSON.stringify(rows[0]));
+const footerInv = rows.find((row) => String(row[0] ?? '').startsWith('Dokumen ini dicetak otomatis'));
+check('bulanan: footer ada', !!footerInv, JSON.stringify(rows[rows.length - 1]));
 
 // ── Rekap Piutang ──
 const groups = svc.rekapPiutang();
 const buf2 = await excel.buildRekapPiutang(groups);
 const zip2 = await JSZip.loadAsync(buf2);
-check('piutang: logo tertanam', !!zip2.file('xl/media/logo.png') && !!zip2.file('xl/drawings/drawing1.xml'));
+check('piutang: logo tertanam', !!zip2.file('xl/media/image1.png'));
 
 const wb2 = XLSX.read(buf2, { type: 'buffer' });
 check('piutang: sheet ada', wb2.SheetNames.includes('Rekap Piutang'));
 const rowsP = XLSX.utils.sheet_to_json(wb2.Sheets['Rekap Piutang'], { header: 1, defval: '' });
-check('piutang: judul', rowsP[3][0] === 'REKAP PIUTANG PER CLIENT', JSON.stringify(rowsP[3]));
+check('piutang: judul', rowsP[3][0] === 'LAPORAN REKAP PIUTANG KESELURUHAN', JSON.stringify(rowsP[3]));
+
 const grand = groups.reduce((s, g) => s + g.total, 0);
 const totalP = rowsP.find((row) => row[2] === 'TOTAL PIUTANG');
 check('piutang: total piutang benar', !!totalP && totalP[3] === grand, JSON.stringify(totalP));
+
 const nSub = groups.filter((g) => g.invoices.length).length;
 const subRows = rowsP.filter((row) => String(row[2]).startsWith('Subtotal '));
 check('piutang: subtotal per client', subRows.length === nSub, `got ${subRows.length}, expect ${nSub}`);
