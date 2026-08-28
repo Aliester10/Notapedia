@@ -54,30 +54,86 @@ function enqueue(task) {
 }
 
 // Layout identik dengan pratinjau aplikasi (src/components/PrintLayout.jsx):
-// font 12px Courier New, spacing px (Tailwind), header logo kiri + judul kanan.
+// gaya dotmatrix hitam-putih, header logo kiri + judul dokumen kanan,
+// info client (alamat/telp), tabel barang, grand total, terbilang & tanda tangan.
 const baseCss = `
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #000; background: #fff; }
-  .doc { max-width: 768px; margin: 0 auto; padding: 16px; }
+  body { margin: 0; font-family: 'Courier New', Courier, monospace; font-size: 11px; color: #000; background: #fff; }
+  .doc { max-width: 768px; margin: 0 auto; padding: 12px 16px; }
   .header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-  .logo img { height: 40px; width: auto; }
-  .kanan { text-align: right; line-height: 20px; }
-  .kanan .judul { font-size: 16px; font-weight: bold; line-height: 24px; }
-  .header-line { border-bottom: 1px solid #000; margin-top: 8px; }
-  .meta { margin-top: 16px; font-size: 12px; line-height: 20px; }
-  .meta-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 12px; }
-  th, td { border: 1px solid #000; padding: 2px 6px; text-align: left; vertical-align: top; }
-  th { font-weight: bold; }
+  .logo img { height: 72px; width: auto; }
+  .kanan { text-align: right; line-height: 18px; align-self: flex-end; }
+  .kanan .judul { font-size: 18px; font-weight: bold; letter-spacing: 1px; line-height: 24px; }
+  .header-line { border-bottom: 2px solid #000; margin-top: 8px; }
+  .meta { margin-top: 12px; font-size: 11px; line-height: 19px; }
+  .meta-2 { display: flex; justify-content: space-between; gap: 8px 28px; }
+  .meta .lbl { display: inline-block; width: 110px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 11px; }
+  th, td { border: 1px solid #000; padding: 3px 6px; text-align: left; vertical-align: top; }
+  th { font-weight: bold; background: #eee; }
   .num { text-align: right; }
-  tfoot td { font-weight: bold; }
-  .note { margin-top: 12px; font-size: 12px; }
-  .sign { margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 32px; font-size: 12px; }
+  tfoot td { font-weight: bold; border-top: 2px solid #000; }
+  .note { margin-top: 8px; font-size: 11px; }
+  .terbilang { margin-top: 10px; font-size: 11px; }
+  .sign { margin-top: 36px; display: grid; grid-template-columns: 1fr 1fr; gap: 32px; font-size: 11px; }
   .sign > div { text-align: center; }
-  .sign .space { margin-top: 64px; }
+  .footer-container { margin-top: 32px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .footnote-box { width: 60%; border: 1px solid #000; padding: 8px; font-size: 10px; text-align: center; line-height: 16px; }
+  .sign-right { font-size: 11px; text-align: center; width: 192px; }
+  .sign-right .space { margin-top: 56px; }
 `;
 
 const fmtNum = (n) => (Number(n) || 0).toLocaleString('id-ID');
+
+const fmtTanggal = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+};
+
+// Terbilang angka → kata Bahasa Indonesia (untuk invoice & tanda terima).
+const SATUAN_KATA = ['', 'satu', 'dua', 'tiga', 'empat', 'lima', 'enam', 'tujuh', 'delapan', 'sembilan', 'sepuluh', 'sebelas'];
+const belasKata = (n) => {
+  if (n < 12) return SATUAN_KATA[n];
+  if (n < 20) return SATUAN_KATA[n - 10] + ' belas';
+  if (n < 100) {
+    const p = Math.floor(n / 10);
+    const s = n % 10;
+    return SATUAN_KATA[p] + ' puluh' + (s ? ' ' + SATUAN_KATA[s] : '');
+  }
+  return '';
+};
+const tigaDigitKata = (n) => {
+  const r = Math.floor(n / 100);
+  const sisa = n % 100;
+  let s = '';
+  if (r > 0) s += (r === 1 ? 'seratus' : SATUAN_KATA[r] + ' ratus');
+  if (sisa > 0) {
+    if (s) s += ' ';
+    s += belasKata(sisa);
+  }
+  return s;
+};
+const terbilang = (n) => {
+  n = Math.floor(Math.abs(n));
+  if (n === 0) return 'nol';
+  const gol = ['', 'ribu', 'juta', 'miliar', 'triliun'];
+  const parts = [];
+  let i = 0;
+  while (n > 0) {
+    const chunk = n % 1000;
+    if (chunk > 0) {
+      if (i === 1 && chunk === 1) {
+        parts.unshift('seribu');
+      } else {
+        parts.unshift(tigaDigitKata(chunk) + (gol[i] ? ' ' + gol[i] : ''));
+      }
+    }
+    n = Math.floor(n / 1000);
+    i++;
+  }
+  return parts.join(' ').trim().replace(/\s+/g, ' ');
+};
 
 // Ukuran kertas per tipe dokumen (CSS @page — dipakai printToPDF via preferCSSPageSize).
 // - invoice: setengah A4 (148 x 210 mm)
@@ -95,12 +151,13 @@ function docHtml({ css, body }) {
 }
 
 // Logo toko (cingculogo) — direferensikan relatif karena HTML dimuat dari file temp.
-function headerBlock(judul, lines) {
+function headerBlock(judul, lines, centerJudul = false) {
   return `
-    <div class="header">
+    <div class="header" style="position: relative;">
       <div class="logo"><img src="logo.png" alt="logo" /></div>
+      ${centerJudul ? `<div class="judul" style="position: absolute; left: 50%; transform: translateX(-50%); text-align: center; font-size: 18px; font-weight: bold; letter-spacing: 1px; top: 10px;">${judul}</div>` : ''}
       <div class="kanan">
-        <div class="judul">${judul}</div>
+        ${!centerJudul ? `<div class="judul">${judul}</div>` : ''}
         ${lines.map((l) => `<div>${l}</div>`).join('')}
       </div>
     </div>
@@ -112,7 +169,7 @@ function htmlSJ(sj) {
     .map(
       (it, i) => `<tr>
         <td>${i + 1}</td><td>${it.nama_barang}</td><td>${it.satuan || ''}</td>
-        <td class="num">${fmtNum(it.qty_kirim)}</td><td class="num">${it.berat > 0 ? fmtNum(it.berat) : '-'}</td><td></td>
+        <td class="num">${fmtNum(it.qty_kirim)}</td><td class="num">${it.berat > 0 ? fmtNum(it.berat) : '-'}</td><td>${it.keterangan || ''}</td>
       </tr>`
     )
     .join('');
@@ -122,22 +179,22 @@ function htmlSJ(sj) {
   );
   const body = `
     <div class="doc">
-      ${headerBlock('SURAT JALAN', [`No. ${sj.no_sj}`, `Tanggal: ${sj.tanggal_kirim}`])}
+      ${headerBlock('SURAT JALAN', [`No. ${sj.no_sj}`, `Tanggal: ${fmtTanggal(sj.tanggal_kirim)}`], true)}
       <div class="meta meta-2">
         <div>
-          <div>No. PO: ${sj.no_po}</div>
-          <div>Kepada Yth: ${sj.client_nama}</div>
+          <div><span class="lbl">No. PO</span>: ${sj.no_po}</div>
+          <div><span class="lbl">Pengirim</span>: ${sj.nama_pengirim || ''}</div>
         </div>
         <div>
-          <div>Pengirim: ${sj.nama_pengirim || ''}</div>
-          <div>Tanggal Kirim: ${sj.tanggal_kirim}</div>
+          <div><span class="lbl">Kepada Yth.</span>: ${sj.client_nama}</div>
+          <div><span class="lbl">Alamat</span>: ${sj.client_alamat || ''}</div>
+          <div><span class="lbl">No. Telp</span>: ${sj.client_telp || ''}</div>
         </div>
       </div>
       <table>
         <thead><tr><th>No</th><th>Nama Barang</th><th>Satuan</th><th>Qty</th><th>Berat (kg)</th><th>Keterangan</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
-      ${sj.catatan ? `<div class="note">Catatan: ${sj.catatan}</div>` : ''}
       ${returTotal > 0 ? `<div class="note">Catatan Retur: ${fmtNum(returTotal)} ditolak / dikembalikan.</div>` : ''}
       <div class="sign">
         <div><div>Pengirim,</div><div class="space">${sj.nama_pengirim || '................'}</div></div>
@@ -151,32 +208,40 @@ function htmlInvoice(inv) {
   const rows = inv.items
     .map(
       (it, i) => `<tr>
-        <td>${i + 1}</td><td>${it.nama_barang}</td><td>${it.satuan || ''}</td>
-        <td class="num">${fmtNum(it.qty)}</td><td class="num">${rupiah(it.harga_satuan)}</td>
-        <td class="num">${rupiah(it.subtotal)}</td>
+        <td>${i + 1}</td><td>${it.nama_barang}</td><td class="num">${fmtNum(it.qty)}</td><td>${it.satuan || ''}</td>
+        <td class="num">${fmtNum(it.harga_satuan)}</td>
+        <td class="num">${fmtNum(it.subtotal)}</td>
       </tr>`
     )
     .join('');
   const body = `
     <div class="doc">
-      ${headerBlock('INVOICE', [`No. ${inv.no_invoice}`, `Tanggal: ${inv.tanggal_invoice}`])}
+      ${headerBlock('INVOICE', [`No. ${inv.no_invoice}`, `Tanggal: ${fmtTanggal(inv.tanggal_invoice)}`], true)}
       <div class="meta meta-2">
         <div>
-          <div>No. PO: ${inv.no_po}</div>
-          <div>No. SJ: ${inv.no_sj}</div>
+          <div><span class="lbl">No. PO</span>: ${inv.no_po}</div>
+          <div><span class="lbl">No. SJ</span>: ${inv.no_sj}</div>
         </div>
         <div>
-          <div>Kepada Yth: ${inv.client_nama}</div>
+          <div><span class="lbl">Kepada Yth.</span>: ${inv.client_nama}</div>
+          <div><span class="lbl">Alamat</span>: ${inv.client_alamat || ''}</div>
+          <div><span class="lbl">No. Telp</span>: ${inv.client_telp || ''}</div>
         </div>
       </div>
       <table>
-        <thead><tr><th>No</th><th>Nama Barang</th><th>Satuan</th><th>Qty</th><th>Harga</th><th>Jumlah</th></tr></thead>
+        <thead><tr><th>No</th><th>Nama Barang</th><th>Qty</th><th>Satuan</th><th>Harga Satuan (Rp)</th><th>Total (Rp)</th></tr></thead>
         <tbody>${rows}</tbody>
-        <tfoot><tr><td colspan="5" class="num">TOTAL</td><td class="num">${rupiah(inv.total)}</td></tr></tfoot>
+        <tfoot><tr><td colspan="5" class="num">GRAND TOTAL</td><td class="num">${fmtNum(inv.total)}</td></tr></tfoot>
       </table>
-      <div class="sign">
-        <div><div>Hormat Kami,</div><div class="space">( NOTAPEDIA )</div></div>
-        <div><div>Mengetahui / Menerima,</div><div class="space">( ${inv.client_nama} )</div></div>
+      <div class="terbilang">Terbilang: ${terbilang(inv.total)} Rupiah.</div>
+      <div class="footer-container">
+        <div class="footnote-box">
+          MOHON LAKUKAN PEMBAYARAN TEPAT WAKTU<br/>
+          UNTUK MENGHINDARI KETERLAMBATAN BARANG. DAN DEMI KELANCARAN PRODUKSI BERSAMA.
+        </div>
+        <div class="sign-right">
+          <div>Hormat Kami,</div><div class="space">Antonius Sumera</div>
+        </div>
       </div>
     </div>`;
   return docHtml({ css: baseCss + pageCss.invoice, body });
@@ -186,23 +251,25 @@ function htmlTandaTerima(tt) {
   const rows = tt.items
     .map(
       (it, i) => `<tr>
-        <td>${i + 1}</td><td>${it.no_invoice}</td><td>${it.no_sbi || ''}</td>
+        <td>${i + 1}</td><td>${it.no_invoice}</td><td>${fmtTanggal(it.tanggal_invoice)}</td>
+        <td>${it.no_po || ''}</td><td>${fmtTanggal(it.tanggal_po)}</td>
         <td class="num">${rupiah(it.jumlah)}</td>
       </tr>`
     )
     .join('');
   const body = `
     <div class="doc">
-      ${headerBlock('TANDA TERIMA', [`No. ${tt.no_dokumen}`, `Tanggal: ${tt.tanggal}`])}
+      ${headerBlock('TANDA TERIMA', [`No. ${tt.no_dokumen}`, `Tanggal: ${fmtTanggal(tt.tanggal)}`], true)}
       <div class="meta">
-        <div>Diserahkan oleh: ${tt.diserahkan_oleh || ''}</div>
-        <div>Diterima oleh: ${tt.diterima_oleh || '-'}</div>
+        <div><span class="lbl">Diserahkan oleh</span>: ${tt.diserahkan_oleh || ''}</div>
+        <div><span class="lbl">Diterima oleh</span>: ${tt.diterima_oleh || '-'}</div>
       </div>
       <table>
-        <thead><tr><th>No</th><th>No. Invoice</th><th>No. SBI</th><th>Jumlah</th></tr></thead>
+        <thead><tr><th>No</th><th>No. Invoice</th><th>Tgl Invoice</th><th>No. PO</th><th>Tanggal PO</th><th>Jumlah (Rp)</th></tr></thead>
         <tbody>${rows}</tbody>
-        <tfoot><tr><td colspan="3" class="num">TOTAL</td><td class="num">${rupiah(tt.total)}</td></tr></tfoot>
+        <tfoot><tr><td colspan="5" class="num">GRAND TOTAL</td><td class="num">${rupiah(tt.total)}</td></tr></tfoot>
       </table>
+      <div class="terbilang">Terbilang: # ${terbilang(tt.total)} Rupiah #</div>
       <div class="sign">
         <div><div>Yang Menyerahkan,</div><div class="space">( ${tt.diserahkan_oleh || '................'} )</div></div>
         <div><div>Yang Menerima,</div><div class="space">( ${tt.diterima_oleh || '................'} )</div></div>
@@ -261,7 +328,7 @@ const reportCss = `
   * { box-sizing: border-box; }
   body { margin: 0; padding: 15mm 14mm; font-family: 'Segoe UI', Arial, sans-serif; color: #111; font-size: 10pt; }
   .header { display: flex; justify-content: space-between; align-items: flex-start; }
-  .header .logo img { height: 44px; width: auto; }
+  .header .logo img { height: 72px; width: auto; }
   .header .tgl-cetak { text-align: right; font-size: 8.5pt; color: #555; }
   .header-line { border-bottom: 2px solid #111; margin-top: 3mm; }
   .judul { text-align: center; margin-top: 5mm; }
@@ -294,30 +361,20 @@ function htmlLaporanBulanan({ bulan, tahun, sj, invoices, totalInvoice }) {
   const periode = `${bulan} ${tahun}`;
   const sjRows = sj.length
     ? sj.map((s, i) => `<tr>
-        <td>${i + 1}</td><td>${s.no_sj}</td><td>${s.tanggal_kirim}</td>
-        <td>${s.no_po}</td><td>${s.client_nama}</td><td>${s.status}</td>
+        <td>${s.no_po}</td><td>${s.tanggal_po ? fmtTanggal(s.tanggal_po) : '-'}</td>
+        <td>${s.no_sj}</td><td>${fmtTanggal(s.tanggal_kirim)}</td>
+        <td>${s.no_invoice || '-'}</td><td>${s.tanggal_invoice ? fmtTanggal(s.tanggal_invoice) : '-'}</td>
+        <td class="num">${s.jumlah_invoice ? rupiah(s.jumlah_invoice) : '-'}</td>
       </tr>`).join('')
-    : `<tr><td colspan="6" style="text-align:center">Tidak ada data</td></tr>`;
-
-  const invRows = invoices.length
-    ? invoices.map((i, idx) => `<tr>
-        <td>${idx + 1}</td><td>${i.no_invoice}</td><td>${i.tanggal_invoice}</td>
-        <td>${i.client_nama}</td><td class="num">${rupiah(i.total)}</td><td>${i.status}</td>
-      </tr>`).join('')
-    : `<tr><td colspan="6" style="text-align:center">Tidak ada data</td></tr>`;
+    : `<tr><td colspan="7" style="text-align:center">Tidak ada data</td></tr>`;
 
   const body = `
     ${reportHeader('LAPORAN BULANAN — SURAT JALAN & INVOICE', periode)}
-    <div class="section-title">1. Daftar Surat Jalan</div>
+    <div class="section-title">LAPORAN</div>
     <table>
-      <thead><tr><th>No</th><th>No SJ</th><th>Tanggal</th><th>No PO</th><th>Client</th><th>Status</th></tr></thead>
+      <thead><tr><th>No PO</th><th>Tanggal PO</th><th>No SJ</th><th>Tanggal SJ</th><th>No Invoice</th><th>Tgl Invoice</th><th>Jumlah</th></tr></thead>
       <tbody>${sjRows}</tbody>
-    </table>
-    <div class="section-title">2. Daftar Invoice</div>
-    <table>
-      <thead><tr><th>No</th><th>No Invoice</th><th>Tanggal</th><th>Client</th><th>Total</th><th>Status</th></tr></thead>
-      <tbody>${invRows}</tbody>
-      <tfoot><tr><td colspan="4" class="num">TOTAL BULAN INI</td><td class="num">${rupiah(totalInvoice)}</td><td></td></tr></tfoot>
+      <tfoot><tr><td colspan="6" class="num">TOTAL BULAN INI</td><td class="num">${rupiah(totalInvoice)}</td></tr></tfoot>
     </table>
     <div class="footer">Dokumen ini dicetak otomatis dari aplikasi Notapedia — ${periode}</div>`;
   return docHtml({ css: reportCss + pageCss['laporan-bulanan'], body });

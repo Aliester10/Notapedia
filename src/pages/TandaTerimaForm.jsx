@@ -52,7 +52,13 @@ export default function TandaTerimaForm() {
             .filter((r) => r.invoice_id && r.no_sbi?.trim())
             .map((r) => {
               const inv = invoiceList.find((x) => x.id === Number(r.invoice_id));
-              return { no_invoice: inv?.no_invoice, no_sbi: r.no_sbi, jumlah: inv?.total ?? 0 };
+              return {
+                no_invoice: inv?.no_invoice,
+                tanggal_invoice: inv?.tanggal_invoice,
+                no_po: inv?.no_po,
+                no_sbi: r.no_sbi,
+                jumlah: inv?.total ?? 0,
+              };
             }),
         };
         await printDocument('tanda-terima', ttData);
@@ -114,7 +120,7 @@ export default function TandaTerimaForm() {
                   <tr>
                     <th className="text-left px-3 py-2 font-medium">Pilih Invoice</th>
                     <th className="text-left px-3 py-2 font-medium">No SBI (dari client)</th>
-                    <th className="text-right px-3 py-2 font-medium w-32">Jumlah</th>
+                    <th className="text-center px-3 py-2 font-medium w-32">Jumlah</th>
                     <th className="w-10"></th>
                   </tr>
                 </thead>
@@ -146,7 +152,7 @@ export default function TandaTerimaForm() {
                             onChange={(e) => updateRow(i, 'no_sbi', e.target.value)}
                           />
                         </td>
-                        <td className="px-3 py-2 text-right font-semibold text-slate-800">
+                        <td className="px-3 py-2 text-center font-semibold text-slate-800">
                           {inv ? formatRupiah(inv.total) : 'Rp 0'}
                         </td>
                         <td className="px-3 py-2 text-center">
@@ -161,7 +167,7 @@ export default function TandaTerimaForm() {
                 <tfoot className="bg-slate-50">
                   <tr>
                     <td colSpan={2} className="px-3 py-2 text-right text-sm font-semibold text-slate-700">Total Gabungan</td>
-                    <td className="px-3 py-2 text-right text-base font-bold text-brand-700">{formatRupiah(total)}</td>
+                    <td className="px-3 py-2 text-center text-base font-bold text-brand-700">{formatRupiah(total)}</td>
                     <td></td>
                   </tr>
                 </tfoot>

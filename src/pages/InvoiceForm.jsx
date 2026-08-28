@@ -58,6 +58,7 @@ export default function InvoiceForm() {
         tanggal_invoice: tanggal,
         items: sj.items.map((it) => ({
           nama_barang: it.nama_barang,
+          satuan: it.satuan,
           qty: it.qty_diterima,
           harga_satuan: Number(harga[it.id]) || 0,
         })),
@@ -70,6 +71,8 @@ export default function InvoiceForm() {
           no_po: sj.no_po,
           no_sj: sj.no_sj,
           client_nama: sj.client_nama,
+          client_alamat: sj.client_alamat,
+          client_telp: sj.client_telp,
           tanggal_invoice: tanggal,
           items: payload.items,
           total,
@@ -135,7 +138,7 @@ export default function InvoiceForm() {
                       <th className="text-center px-3 py-2 font-medium w-20">Satuan</th>
                       <th className="text-right px-3 py-2 font-medium w-20">Qty</th>
                       <th className="text-right px-3 py-2 font-medium w-32">Harga Satuan</th>
-                      <th className="text-right px-3 py-2 font-medium w-32">Subtotal</th>
+                      <th className="text-center px-3 py-2 font-medium w-32">Subtotal</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -155,7 +158,7 @@ export default function InvoiceForm() {
                               onChange={(e) => updateHarga(it.id, e.target.value)}
                             />
                           </td>
-                          <td className="px-3 py-2 text-right font-semibold text-slate-800">
+                          <td className="px-3 py-2 text-center font-semibold text-slate-800">
                             {formatRupiah(h * it.qty_diterima)}
                           </td>
                         </tr>
@@ -165,7 +168,7 @@ export default function InvoiceForm() {
                   <tfoot className="bg-slate-50">
                     <tr>
                       <td colSpan={4} className="px-3 py-2 text-right text-sm font-semibold text-slate-700">Total</td>
-                      <td className="px-3 py-2 text-right text-base font-bold text-brand-700">{formatRupiah(total)}</td>
+                      <td className="px-3 py-2 text-center text-base font-bold text-brand-700">{formatRupiah(total)}</td>
                     </tr>
                   </tfoot>
                 </table>

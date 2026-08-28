@@ -57,7 +57,15 @@ export function deleteClient(id) {
 
 function poItems(poId) {
   return getDb()
-    .prepare('SELECT id, nama_barang, satuan, qty_pesan, qty_terkirim FROM po_item WHERE po_id=? ORDER BY id')
+    .prepare(`
+      SELECT pi.id, pi.nama_barang, pi.satuan, pi.qty_pesan, pi.qty_terkirim,
+             COALESCE((
+               SELECT SUM(si.qty_kirim) FROM sj_item si
+               JOIN surat_jalan s ON s.id = si.sj_id
+               WHERE si.po_item_id = pi.id AND s.status = 'Terkirim'
+             ), 0) AS qty_sj
+      FROM po_item pi WHERE pi.po_id=? ORDER BY pi.id
+    `)
     .all(poId);
 }
 
@@ -130,7 +138,8 @@ export function updatePO(id, { no_po, client_id, tanggal_po, catatan = '', items
 function sjDetail(sjId) {
   const d = getDb();
   const sj = d.prepare(`
-    SELECT s.id, s.no_sj, s.po_id, p.no_po, c.nama AS client_nama, s.tanggal_kirim,
+    SELECT s.id, s.no_sj, s.po_id, p.no_po, c.nama AS client_nama, c.alamat AS client_alamat,
+           c.no_telp AS client_telp, s.tanggal_kirim,
            s.nama_pengirim, s.status, s.catatan, s.created_at
     FROM surat_jalan s
     JOIN po p ON p.id = s.po_id
@@ -140,7 +149,7 @@ function sjDetail(sjId) {
   if (!sj) return null;
 
   const items = d.prepare(`
-    SELECT si.id, si.po_item_id, pi.nama_barang, pi.satuan, si.qty_kirim, si.qty_diterima, si.berat
+    SELECT si.id, si.po_item_id, pi.nama_barang, pi.satuan, si.qty_kirim, si.qty_diterima, si.berat, si.keterangan
     FROM sj_item si JOIN po_item pi ON pi.id = si.po_item_id
     WHERE si.sj_id=? ORDER BY si.id
   `).all(sjId);
@@ -201,10 +210,17 @@ export function createSJ({ po_id, tanggal_kirim, nama_pengirim = '', catatan = '
     for (const it of items) {
       const qty = Number(it.qty_kirim);
       if (!(qty > 0)) continue;
-      const pi = d.prepare('SELECT qty_pesan, qty_terkirim FROM po_item WHERE id=? AND po_id=?')
-        .get(it.po_item_id, po_id);
+      const pi = d.prepare(`
+        SELECT qty_pesan, qty_terkirim,
+               COALESCE((
+                 SELECT SUM(si.qty_kirim) FROM sj_item si
+                 JOIN surat_jalan s ON s.id = si.sj_id
+                 WHERE si.po_item_id = po_item.id AND s.status = 'Terkirim'
+               ), 0) AS qty_sj
+        FROM po_item WHERE id=? AND po_id=?
+      `).get(it.po_item_id, po_id);
       if (!pi) throw err('Item PO tidak valid.');
-      const sisa = pi.qty_pesan - pi.qty_terkirim;
+      const sisa = pi.qty_pesan - pi.qty_terkirim - pi.qty_sj;
       if (qty > sisa) throw err(`Qty kirim melebihi sisa PO untuk "${it.nama_barang || 'item'}" (sisa ${sisa}).`);
     }
 
@@ -215,10 +231,10 @@ export function createSJ({ po_id, tanggal_kirim, nama_pengirim = '', catatan = '
     `).run(noSJ, po_id, tanggal_kirim, nama_pengirim.trim(), 'Terkirim', catatan.trim());
     const sjId = r.lastInsertRowid;
 
-    const ins = d.prepare('INSERT INTO sj_item (sj_id, po_item_id, qty_kirim, qty_diterima, berat) VALUES (?,?,?,0,?)');
+    const ins = d.prepare('INSERT INTO sj_item (sj_id, po_item_id, qty_kirim, qty_diterima, berat, keterangan) VALUES (?,?,?,0,?,?)');
     for (const it of items) {
       const qty = Number(it.qty_kirim);
-      if (qty > 0) ins.run(sjId, it.po_item_id, qty, Number(it.berat) || 0);
+      if (qty > 0) ins.run(sjId, it.po_item_id, qty, Number(it.berat) || 0, it.keterangan?.trim() || '');
     }
     return { id: sjId, no_sj: noSJ };
   });
@@ -289,7 +305,8 @@ function invoiceDetail(invId) {
   const d = getDb();
   const inv = d.prepare(`
     SELECT i.id, i.no_invoice, i.po_id, p.no_po, i.sj_id, s.no_sj, c.id AS client_id,
-           c.nama AS client_nama, i.tanggal_invoice, i.status, i.tanggal_ditagih,
+           c.nama AS client_nama, c.alamat AS client_alamat, c.no_telp AS client_telp,
+           i.tanggal_invoice, i.status, i.tanggal_ditagih,
            i.tanggal_dibayar, i.total, i.created_at
     FROM invoice i
     JOIN po p ON p.id = i.po_id
@@ -299,7 +316,7 @@ function invoiceDetail(invId) {
   `).get(invId);
   if (!inv) return null;
   const items = d.prepare(`
-    SELECT id, nama_barang, qty, harga_satuan, subtotal FROM invoice_item WHERE invoice_id=? ORDER BY id
+    SELECT id, nama_barang, satuan, qty, harga_satuan, subtotal FROM invoice_item WHERE invoice_id=? ORDER BY id
   `).all(invId);
   return { ...inv, items };
 }
@@ -358,7 +375,13 @@ export function createInvoice({ sj_id, tanggal_invoice, items = [] }) {
     const rows = items.map((it) => {
       const subtotal = Number(it.qty) * Number(it.harga_satuan);
       total += subtotal;
-      return { nama_barang: it.nama_barang.trim(), qty: Number(it.qty), harga_satuan: Number(it.harga_satuan), subtotal };
+      return {
+        nama_barang: it.nama_barang.trim(),
+        satuan: it.satuan?.trim() ?? '',
+        qty: Number(it.qty),
+        harga_satuan: Number(it.harga_satuan),
+        subtotal,
+      };
     });
 
     const r = d.prepare(`
@@ -367,8 +390,8 @@ export function createInvoice({ sj_id, tanggal_invoice, items = [] }) {
     `).run(noInv, sj.po_id, sj_id, tanggal_invoice, 'Terkirim', total);
     const invId = r.lastInsertRowid;
 
-    const ins = d.prepare('INSERT INTO invoice_item (invoice_id, nama_barang, qty, harga_satuan, subtotal) VALUES (?,?,?,?,?)');
-    for (const row of rows) ins.run(invId, row.nama_barang, row.qty, row.harga_satuan, row.subtotal);
+    const ins = d.prepare('INSERT INTO invoice_item (invoice_id, nama_barang, satuan, qty, harga_satuan, subtotal) VALUES (?,?,?,?,?,?)');
+    for (const row of rows) ins.run(invId, row.nama_barang, row.satuan, row.qty, row.harga_satuan, row.subtotal);
 
     return { id: invId, no_invoice: noInv };
   });
@@ -411,8 +434,11 @@ export function listTandaTerima() {
   return rows.map((tt) => ({
     ...tt,
     items: d.prepare(`
-      SELECT tti.id, tti.invoice_id, i.no_invoice, tti.no_sbi, tti.jumlah
-      FROM tanda_terima_item tti JOIN invoice i ON i.id = tti.invoice_id
+      SELECT tti.id, tti.invoice_id, i.no_invoice, i.tanggal_invoice, p.no_po, p.tanggal_po,
+             tti.no_sbi, tti.jumlah
+      FROM tanda_terima_item tti
+      JOIN invoice i ON i.id = tti.invoice_id
+      JOIN po p ON p.id = i.po_id
       WHERE tti.tanda_terima_id=? ORDER BY tti.id
     `).all(tt.id),
   }));
@@ -424,8 +450,11 @@ export function getTandaTerima(id) {
   return {
     ...tt,
     items: getDb().prepare(`
-      SELECT tti.id, tti.invoice_id, i.no_invoice, tti.no_sbi, tti.jumlah
-      FROM tanda_terima_item tti JOIN invoice i ON i.id = tti.invoice_id
+      SELECT tti.id, tti.invoice_id, i.no_invoice, i.tanggal_invoice, p.no_po, p.tanggal_po,
+             tti.no_sbi, tti.jumlah
+      FROM tanda_terima_item tti
+      JOIN invoice i ON i.id = tti.invoice_id
+      JOIN po p ON p.id = i.po_id
       WHERE tti.tanda_terima_id=? ORDER BY tti.id
     `).all(id),
   };
@@ -473,10 +502,12 @@ export function laporanBulanan(bulan, tahun) {
   `).all(String(bulan).padStart(2, '0'), String(tahun));
 
   const sj = d.prepare(`
-    SELECT s.id, s.no_sj, p.no_po, c.nama AS client_nama, s.tanggal_kirim, s.status
+    SELECT s.id, s.no_sj, p.no_po, p.tanggal_po, c.nama AS client_nama, s.tanggal_kirim, s.status,
+           i.no_invoice AS no_invoice, i.tanggal_invoice AS tanggal_invoice, i.total AS jumlah_invoice
     FROM surat_jalan s
     JOIN po p ON p.id = s.po_id
     JOIN client c ON c.id = p.client_id
+    LEFT JOIN invoice i ON i.sj_id = s.id
     WHERE strftime('%m', s.tanggal_kirim) = ? AND strftime('%Y', s.tanggal_kirim) = ?
     ORDER BY s.tanggal_kirim DESC
   `).all(String(bulan).padStart(2, '0'), String(tahun));

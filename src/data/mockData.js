@@ -324,8 +324,8 @@ export const tandaTerimaList = [
     diterima_oleh: 'Bagian Keuangan CV Sinar Jaya',
     total: 12650000,
     items: [
-      { id: 1, no_invoice: 'INV-0001', no_sbi: 'SBI/2026/08/0033', jumlah: 14300000 },
-      { id: 2, no_invoice: 'INV-0002', no_sbi: 'SBI/2026/08/0034', jumlah: 4450000 },
+      { id: 1, no_invoice: 'INV-0001', tanggal_invoice: '2026-08-05', no_po: 'PO/2026/08/001', no_sbi: 'SBI/2026/08/0033', jumlah: 14300000 },
+      { id: 2, no_invoice: 'INV-0002', tanggal_invoice: '2026-08-09', no_po: 'PO/2026/08/001', no_sbi: 'SBI/2026/08/0034', jumlah: 4450000 },
     ],
   },
   {
@@ -336,7 +336,7 @@ export const tandaTerimaList = [
     diterima_oleh: 'Bagian Keuangan CV Sinar Jaya',
     total: 8200000,
     items: [
-      { id: 3, no_invoice: 'INV-0003', no_sbi: 'SBI/2026/08/0040', jumlah: 8200000 },
+      { id: 3, no_invoice: 'INV-0003', tanggal_invoice: '2026-08-10', no_po: 'PO/2026/08/002', no_sbi: 'SBI/2026/08/0040', jumlah: 8200000 },
     ],
   },
 ];
@@ -351,3 +351,6 @@ export const formatDate = (iso) => {
 };
 
 export const formatNumber = (n) => (n ?? 0).toLocaleString('id-ID');
+
+export const sisaItem = (it) =>
+  (Number(it?.qty_pesan) || 0) - (Number(it?.qty_terkirim) || 0) - (Number(it?.qty_sj) || 0);

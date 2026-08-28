@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, Save } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import { listPO, createSJ } from '../data/api';
-import { formatNumber } from '../data/mockData';
+import { formatNumber, sisaItem } from '../data/mockData';
 
 export default function SJForm() {
   const navigate = useNavigate();
@@ -29,7 +29,7 @@ export default function SJForm() {
     if (p) {
       const awal = {};
       p.items.forEach((it) => {
-        awal[it.id] = { qty_kirim: '', berat: '' };
+        awal[it.id] = { qty_kirim: '', berat: '', keterangan: '' };
       });
       setItems(awal);
     } else {
@@ -52,8 +52,10 @@ export default function SJForm() {
         items: po.items.map((it) => ({
           po_item_id: it.id,
           nama_barang: it.nama_barang,
+          satuan: it.satuan,
           qty_kirim: Number(items[it.id]?.qty_kirim) || 0,
           berat: Number(items[it.id]?.berat) || 0,
+          keterangan: items[it.id]?.keterangan || '',
         })),
       };
       const result = await createSJ(payload);
@@ -129,12 +131,13 @@ export default function SJForm() {
                       <th className="text-right px-3 py-2 font-medium w-24">Sisa PO</th>
                       <th className="text-right px-3 py-2 font-medium w-28">Qty Kirim</th>
                       <th className="text-right px-3 py-2 font-medium w-20">Berat (kg)</th>
+                      <th className="text-left px-3 py-2 font-medium w-40">Keterangan</th>
                     </tr>
                   </thead>
                   <tbody>
                     {po.items.map((it) => {
-                      const sisa = it.qty_pesan - it.qty_terkirim;
-                      const val = items[it.id] ?? { qty_kirim: '', berat: '' };
+                      const sisa = sisaItem(it);
+                      const val = items[it.id] ?? { qty_kirim: '', berat: '', keterangan: '' };
                       return (
                         <tr key={it.id} className="border-t border-slate-200">
                           <td className="px-3 py-2 font-medium text-slate-800">{it.nama_barang}</td>
@@ -157,6 +160,15 @@ export default function SJForm() {
                               placeholder="0"
                               value={val.berat}
                               onChange={(e) => updateItem(it.id, 'berat', e.target.value)}
+                            />
+                          </td>
+                          <td className="px-3 py-2">
+                            <input
+                              type="text"
+                              className="input"
+                              placeholder="Keterangan..."
+                              value={val.keterangan}
+                              onChange={(e) => updateItem(it.id, 'keterangan', e.target.value)}
                             />
                           </td>
                         </tr>
