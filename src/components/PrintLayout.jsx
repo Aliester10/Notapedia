@@ -11,7 +11,7 @@ const dotStyle = {
   background: '#fff',
 };
 
-const thTd = 'border border-black px-1.5 py-0.5 text-left align-top';
+const thTd = 'border border-black px-1.5 py-0.5 text-center align-top';
 
 function DocHeader({ kiri, tengah, kanan }) {
   return (
@@ -19,7 +19,7 @@ function DocHeader({ kiri, tengah, kanan }) {
       <div className="flex items-start justify-between relative">
         <img src={cingcuLogo} alt="logo" className="h-[72px] w-auto" />
         {tengah && <div className="absolute left-1/2 -translate-x-1/2 text-center leading-[18px]">{tengah}</div>}
-        <div className="text-right leading-[18px] self-end">{kanan}</div>
+        <div className="text-right leading-[22px] self-end text-sm">{kanan}</div>
       </div>
       <div className="mt-2 border-b-2 border-black" />
     </div>
@@ -35,7 +35,7 @@ function MetaRow({ label, value }) {
 }
 
 function TerbilangText({ total }) {
-  return <div className="mt-2.5 text-xs">Terbilang: {terbilang(total)} Rupiah.</div>;
+  return <div className="mt-2.5 text-sm">Terbilang: {terbilang(total)} Rupiah.</div>;
 }
 
 export function SJPrint({ sj }) {
@@ -56,7 +56,7 @@ export function SJPrint({ sj }) {
           </>
         }
       />
-      <div className="mt-3 flex justify-between text-xs leading-[19px]">
+      <div className="mt-3 flex justify-between text-sm leading-[22px]">
         <div>
           <MetaRow label="No. PO" value={sj.no_po} />
           <MetaRow label="Pengirim" value={sj.nama_pengirim} />
@@ -68,7 +68,7 @@ export function SJPrint({ sj }) {
         </div>
       </div>
 
-      <table className="mt-3 w-full border-collapse text-xs">
+      <table className="mt-3 w-full border-collapse text-sm">
         <thead>
           <tr>
             <th className={thTd}>No</th>
@@ -94,12 +94,12 @@ export function SJPrint({ sj }) {
       </table>
 
       {totalRetur > 0 && (
-        <div className="mt-2 text-xs">
+        <div className="mt-2 text-sm">
           Catatan Retur: {formatQty(totalRetur)} barang ditolak / dikembalikan.
         </div>
       )}
 
-      <div className="mt-9 grid grid-cols-2 gap-8 text-xs">
+      <div className="mt-9 grid grid-cols-2 gap-8 text-sm">
         <div className="text-center">
           <div>Pengirim,</div>
           <div className="mt-14">{sj.nama_pengirim}</div>
@@ -122,12 +122,12 @@ export function InvoicePrint({ inv }) {
         }
         kanan={
           <>
-            <div>No. {inv.no_invoice}</div>
+            <div className="text-2xl font-bold">No. {inv.no_invoice}</div>
             <div>Tanggal: {formatDateLong(inv.tanggal_invoice)}</div>
           </>
         }
       />
-      <div className="mt-3 flex justify-between text-xs leading-[19px]">
+      <div className="mt-3 flex justify-between text-sm leading-[22px]">
         <div>
           <MetaRow label="No. PO" value={inv.no_po} />
           <MetaRow label="No. SJ" value={inv.no_sj} />
@@ -139,7 +139,7 @@ export function InvoicePrint({ inv }) {
         </div>
       </div>
 
-      <table className="mt-3 w-full border-collapse text-xs">
+      <table className="mt-3 w-full border-collapse text-sm">
         <thead>
           <tr>
             <th className={thTd}>No</th>
@@ -179,7 +179,7 @@ export function InvoicePrint({ inv }) {
           UNTUK MENGHINDARI KETERLAMBATAN BARANG. DAN DEMI KELANCARAN PRODUKSI BERSAMA.
         </div>
 
-        <div className="text-center w-48 text-xs">
+        <div className="text-center w-48 text-sm">
           <div>Hormat Kami,</div>
           <div className="mt-14">Antonius Sumera</div>
         </div>
@@ -203,12 +203,12 @@ export function TandaTerimaPrint({ tt }) {
         }
       />
 
-      <div className="mt-3 text-xs leading-[19px]">
+      <div className="mt-3 text-sm leading-[22px]">
         <MetaRow label="Diserahkan oleh" value={tt.diserahkan_oleh} />
         <MetaRow label="Diterima oleh" value={tt.diterima_oleh || '-'} />
       </div>
 
-      <table className="mt-3 w-full border-collapse text-xs">
+      <table className="mt-3 w-full border-collapse text-sm">
         <thead>
           <tr>
             <th className={thTd}>No</th>
@@ -239,9 +239,9 @@ export function TandaTerimaPrint({ tt }) {
         </tfoot>
       </table>
 
-      <div className="mt-2.5 text-xs">Terbilang: # {terbilang(tt.total)} Rupiah #</div>
+      <div className="mt-2.5 text-sm">Terbilang: # {terbilang(tt.total)} Rupiah #</div>
 
-      <div className="mt-9 grid grid-cols-2 gap-8 text-xs">
+      <div className="mt-9 grid grid-cols-2 gap-8 text-sm">
         <div className="text-center">
           <div>Yang Menyerahkan,</div>
           <div className="mt-14">( {tt.diserahkan_oleh} )</div>
