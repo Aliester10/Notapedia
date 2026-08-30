@@ -29,13 +29,13 @@ function DocHeader({ kiri, tengah, kanan }) {
 function MetaRow({ label, value }) {
   return (
     <div>
-      <span className="inline-block w-[110px]">{label}</span>: {value}
+      <span className="inline-block w-[130px]">{label}</span>: {value}
     </div>
   );
 }
 
 function TerbilangText({ total }) {
-  return <div className="mt-2.5 text-sm">Terbilang: {terbilang(total)} Rupiah.</div>;
+  return <div className="mt-2.5 text-sm">Terbilang: <span className="italic capitalize">{terbilang(total)}</span> Rupiah.</div>;
 }
 
 export function SJPrint({ sj }) {
@@ -51,8 +51,8 @@ export function SJPrint({ sj }) {
         }
         kanan={
           <>
-            <div>No. {sj.no_sj}</div>
-            <div>Tanggal: {formatDateLong(sj.tanggal_kirim)}</div>
+            <div className="text-2xl font-bold">No. {sj.no_sj}</div>
+            <div>{formatDateLong(sj.tanggal_kirim)}</div>
           </>
         }
       />
@@ -63,20 +63,17 @@ export function SJPrint({ sj }) {
         </div>
         <div>
           <MetaRow label="Kepada Yth." value={sj.client_nama} />
-          <MetaRow label="Alamat" value={sj.client_alamat || ''} />
-          <MetaRow label="No. Telp" value={sj.client_telp || ''} />
         </div>
       </div>
 
       <table className="mt-3 w-full border-collapse text-sm">
         <thead>
           <tr>
-            <th className={thTd}>No</th>
-            <th className={thTd}>Nama Barang</th>
-            <th className={thTd}>Satuan</th>
-            <th className={`${thTd} text-right`}>Qty</th>
-            <th className={`${thTd} text-right`}>Berat (kg)</th>
-            <th className={thTd}>Keterangan</th>
+            <th className={`${thTd} text-center`}>No</th>
+            <th className={`${thTd} text-center`}>Nama Barang</th>
+            <th className={`${thTd} text-center`}>Satuan</th>
+            <th className={`${thTd} text-center`}>Qty</th>
+            <th className={`${thTd} text-center`}>Keterangan</th>
           </tr>
         </thead>
         <tbody>
@@ -85,8 +82,7 @@ export function SJPrint({ sj }) {
               <td className={thTd}>{i + 1}</td>
               <td className={thTd}>{it.nama_barang}</td>
               <td className={thTd}>{it.satuan}</td>
-              <td className={`${thTd} text-right`}>{it.qty_kirim}</td>
-              <td className={`${thTd} text-right`}>{it.berat || '-'}</td>
+              <td className={`${thTd} text-center`}>{it.qty_kirim}</td>
               <td className={thTd}>{it.keterangan || ''}</td>
             </tr>
           ))}
@@ -123,7 +119,7 @@ export function InvoicePrint({ inv }) {
         kanan={
           <>
             <div className="text-2xl font-bold">No. {inv.no_invoice}</div>
-            <div>Tanggal: {formatDateLong(inv.tanggal_invoice)}</div>
+            <div>{formatDateLong(inv.tanggal_invoice)}</div>
           </>
         }
       />
@@ -131,23 +127,22 @@ export function InvoicePrint({ inv }) {
         <div>
           <MetaRow label="No. PO" value={inv.no_po} />
           <MetaRow label="No. SJ" value={inv.no_sj} />
+          {inv.rest && <MetaRow label="Rest" value={inv.rest} />}
         </div>
         <div>
           <MetaRow label="Kepada Yth." value={inv.client_nama} />
-          <MetaRow label="Alamat" value={inv.client_alamat || ''} />
-          <MetaRow label="No. Telp" value={inv.client_telp || ''} />
         </div>
       </div>
 
       <table className="mt-3 w-full border-collapse text-sm">
         <thead>
           <tr>
-            <th className={thTd}>No</th>
+            <th className={`${thTd} w-8`}>No</th>
             <th className={thTd}>Nama Barang</th>
-            <th className={`${thTd} text-right`}>Qty</th>
-            <th className={thTd}>Satuan</th>
-            <th className={`${thTd} text-right`}>Harga Satuan (Rp)</th>
-            <th className={`${thTd} text-right`}>Total (Rp)</th>
+            <th className={`${thTd} w-12`}>Qty</th>
+            <th className={`${thTd} w-16`}>Satuan</th>
+            <th className={`${thTd} w-32 whitespace-nowrap`}>Harga Satuan (Rp)</th>
+            <th className={`${thTd} w-32 whitespace-nowrap`}>Total (Rp)</th>
           </tr>
         </thead>
         <tbody>
@@ -173,10 +168,9 @@ export function InvoicePrint({ inv }) {
       <TerbilangText total={inv.total} />
 
       <div className="mt-8 flex items-start justify-between">
-        <div className="w-[60%] border border-black p-2 text-center text-[10px] leading-4">
-          MOHON LAKUKAN PEMBAYARAN TEPAT WAKTU
-          <br />
-          UNTUK MENGHINDARI KETERLAMBATAN BARANG. DAN DEMI KELANCARAN PRODUKSI BERSAMA.
+        <div className="w-[340px] border border-black p-2 text-center text-[11px] leading-relaxed font-bold">
+          MOHON LAKUKAN PEMBAYARAN TEPAT WAKTU<br />
+          UNTUK MENGHINDARI KETERLAMBATAN BARANG DAN DEMI KELANCARAN PRODUKSI BERSAMA.
         </div>
 
         <div className="text-center w-48 text-sm">
@@ -197,8 +191,8 @@ export function TandaTerimaPrint({ tt }) {
         }
         kanan={
           <>
-            <div>No. {tt.no_dokumen}</div>
-            <div>Tanggal: {formatDateLong(tt.tanggal)}</div>
+            <div className="text-2xl font-bold">No. {tt.no_dokumen}</div>
+            <div>{formatDateLong(tt.tanggal)}</div>
           </>
         }
       />
@@ -216,7 +210,7 @@ export function TandaTerimaPrint({ tt }) {
             <th className={thTd}>Tgl Invoice</th>
             <th className={thTd}>No. PO</th>
             <th className={thTd}>Tanggal PO</th>
-            <th className={`${thTd} text-right`}>Jumlah (Rp)</th>
+            <th className={thTd}>Jumlah (Rp)</th>
           </tr>
         </thead>
         <tbody>
@@ -239,7 +233,7 @@ export function TandaTerimaPrint({ tt }) {
         </tfoot>
       </table>
 
-      <div className="mt-2.5 text-sm">Terbilang: # {terbilang(tt.total)} Rupiah #</div>
+      <div className="mt-2.5 text-sm">Terbilang: <span className="italic capitalize">{terbilang(tt.total)}</span> Rupiah.</div>
 
       <div className="mt-9 grid grid-cols-2 gap-8 text-sm">
         <div className="text-center">
@@ -267,6 +261,15 @@ function formatDateLong(iso) {
   if (!iso) return '';
   const d = new Date(iso);
   return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+}
+
+function formatDateNumeric(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
 }
 
 const SATUAN_KATA = ['', 'satu', 'dua', 'tiga', 'empat', 'lima', 'enam', 'tujuh', 'delapan', 'sembilan', 'sepuluh', 'sebelas'];

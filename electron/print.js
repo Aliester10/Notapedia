@@ -67,24 +67,30 @@ const baseCss = `
   .header-line { border-bottom: 2px solid #000; margin-top: 8px; }
   .meta { margin-top: 12px; font-size: 11px; line-height: 19px; }
   .meta-2 { display: flex; justify-content: space-between; gap: 8px 28px; }
-  .meta .lbl { display: inline-block; width: 110px; }
-  table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 11px; }
-  th, td { border: 1px solid #000; padding: 3px 6px; text-align: left; vertical-align: top; }
-  th { font-weight: bold; background: #eee; }
+  .meta .lbl { display: inline-block; width: 90px; white-space: nowrap; }
+  .meta .lbl-lg { display: inline-block; width: 140px; white-space: nowrap; }
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  th, td { border: 1px solid #000; padding: 2px 4px; vertical-align: top; }
+  th { font-weight: bold; background: #eee; white-space: nowrap; }
+  th.col-no { width: 30px; }
+  th.col-qty { width: 45px; }
+  th.col-satuan { width: 55px; }
+  th.col-harga { width: 120px; }
+  th.col-total { width: 120px; }
   .num { text-align: right; }
+  .center { text-align: center; }
   tfoot td { font-weight: bold; border-top: 2px solid #000; }
   .note { margin-top: 8px; font-size: 11px; }
   .terbilang { margin-top: 10px; font-size: 11px; }
   .sign { margin-top: 36px; display: grid; grid-template-columns: 1fr 1fr; gap: 32px; font-size: 11px; }
   .sign > div { text-align: center; }
   .footer-container { margin-top: 32px; display: flex; justify-content: space-between; align-items: flex-start; }
-  .footnote-box { width: 60%; border: 1px solid #000; padding: 8px; font-size: 10px; text-align: center; line-height: 16px; }
+  .footnote-box { display: inline-block; border: 1px solid #000; padding: 6px 12px; font-size: 10px; text-align: center; line-height: 14px; font-weight: bold; }
   .sign-right { font-size: 11px; text-align: center; width: 192px; }
   .sign-right .space { margin-top: 56px; }
 `;
 
-const fmtNum = (n) => (Number(n) || 0).toLocaleString('id-ID');
-
+const fmtNum = (n) => (n ?? 0).toLocaleString('id-ID');
 const fmtTanggal = (iso) => {
   if (!iso) return '';
   const d = new Date(iso);
@@ -132,7 +138,8 @@ const terbilang = (n) => {
     n = Math.floor(n / 1000);
     i++;
   }
-  return parts.join(' ').trim().replace(/\s+/g, ' ');
+  const res = parts.join(' ').trim().replace(/\s+/g, ' ');
+  return res.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 };
 
 // Ukuran kertas per tipe dokumen (CSS @page — dipakai printToPDF via preferCSSPageSize).
@@ -169,7 +176,7 @@ function htmlSJ(sj) {
     .map(
       (it, i) => `<tr>
         <td>${i + 1}</td><td>${it.nama_barang}</td><td>${it.satuan || ''}</td>
-        <td class="num">${fmtNum(it.qty_kirim)}</td><td class="num">${it.berat > 0 ? fmtNum(it.berat) : '-'}</td><td>${it.keterangan || ''}</td>
+        <td class="center">${fmtNum(it.qty_kirim)}</td><td>${it.keterangan || ''}</td>
       </tr>`
     )
     .join('');
@@ -179,7 +186,7 @@ function htmlSJ(sj) {
   );
   const body = `
     <div class="doc">
-      ${headerBlock('SURAT JALAN', [`No. ${sj.no_sj}`, `Tanggal: ${fmtTanggal(sj.tanggal_kirim)}`], true)}
+      ${headerBlock('SURAT JALAN', [`<span style="font-size: 24px; font-weight: bold;">No. ${sj.no_sj}</span>`, fmtTanggal(sj.tanggal_kirim)], true)}
       <div class="meta meta-2">
         <div>
           <div><span class="lbl">No. PO</span>: ${sj.no_po}</div>
@@ -187,12 +194,10 @@ function htmlSJ(sj) {
         </div>
         <div>
           <div><span class="lbl">Kepada Yth.</span>: ${sj.client_nama}</div>
-          <div><span class="lbl">Alamat</span>: ${sj.client_alamat || ''}</div>
-          <div><span class="lbl">No. Telp</span>: ${sj.client_telp || ''}</div>
         </div>
       </div>
       <table>
-        <thead><tr><th>No</th><th>Nama Barang</th><th>Satuan</th><th>Qty</th><th>Berat (kg)</th><th>Keterangan</th></tr></thead>
+        <thead><tr><th class="center">No</th><th class="center">Nama Barang</th><th class="center">Satuan</th><th class="center">Qty</th><th class="center">Keterangan</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
       ${returTotal > 0 ? `<div class="note">Catatan Retur: ${fmtNum(returTotal)} ditolak / dikembalikan.</div>` : ''}
@@ -208,36 +213,35 @@ function htmlInvoice(inv) {
   const rows = inv.items
     .map(
       (it, i) => `<tr>
-        <td>${i + 1}</td><td>${it.nama_barang}</td><td class="num">${fmtNum(it.qty)}</td><td>${it.satuan || ''}</td>
-        <td class="num">${fmtNum(it.harga_satuan)}</td>
-        <td class="num">${fmtNum(it.subtotal)}</td>
+        <td>${i + 1}</td><td>${it.nama_barang}</td><td class="center">${fmtNum(it.qty)}</td><td>${it.satuan || ''}</td>
+        <td class="center">${fmtNum(it.harga_satuan)}</td>
+        <td class="center">${fmtNum(it.subtotal)}</td>
       </tr>`
     )
     .join('');
   const body = `
     <div class="doc">
-      ${headerBlock('INVOICE', [`No. ${inv.no_invoice}`, `Tanggal: ${fmtTanggal(inv.tanggal_invoice)}`], true)}
+      ${headerBlock('INVOICE', [`No. ${inv.no_invoice}`, fmtTanggal(inv.tanggal_invoice)], true)}
       <div class="meta meta-2">
         <div>
           <div><span class="lbl">No. PO</span>: ${inv.no_po}</div>
           <div><span class="lbl">No. SJ</span>: ${inv.no_sj}</div>
+          ${inv.rest ? `<div><span class="lbl">Rest</span>: ${inv.rest}</div>` : ''}
         </div>
         <div>
           <div><span class="lbl">Kepada Yth.</span>: ${inv.client_nama}</div>
-          <div><span class="lbl">Alamat</span>: ${inv.client_alamat || ''}</div>
-          <div><span class="lbl">No. Telp</span>: ${inv.client_telp || ''}</div>
         </div>
       </div>
       <table>
-        <thead><tr><th>No</th><th>Nama Barang</th><th>Qty</th><th>Satuan</th><th>Harga Satuan (Rp)</th><th>Total (Rp)</th></tr></thead>
+        <thead><tr><th class="center col-no">No</th><th class="center">Nama Barang</th><th class="center col-qty">Qty</th><th class="center col-satuan">Satuan</th><th class="center col-harga">Harga Satuan (Rp)</th><th class="center col-total">Total (Rp)</th></tr></thead>
         <tbody>${rows}</tbody>
-        <tfoot><tr><td colspan="5" class="num">GRAND TOTAL</td><td class="num">${fmtNum(inv.total)}</td></tr></tfoot>
+        <tfoot><tr><td colspan="5" class="num">GRAND TOTAL</td><td class="center">${fmtNum(inv.total)}</td></tr></tfoot>
       </table>
-      <div class="terbilang">Terbilang: ${terbilang(inv.total)} Rupiah.</div>
+      <div class="terbilang" style="font-style: italic;">Terbilang: ${terbilang(inv.total)} Rupiah.</div>
       <div class="footer-container">
-        <div class="footnote-box">
+        <div class="footnote-box" style="font-weight: bold; font-size: 11px; line-height: 1.5; border: 1px solid black; padding: 8px; max-width: 340px;">
           MOHON LAKUKAN PEMBAYARAN TEPAT WAKTU<br/>
-          UNTUK MENGHINDARI KETERLAMBATAN BARANG. DAN DEMI KELANCARAN PRODUKSI BERSAMA.
+          UNTUK MENGHINDARI KETERLAMBATAN BARANG DAN DEMI KELANCARAN PRODUKSI BERSAMA.
         </div>
         <div class="sign-right">
           <div>Hormat Kami,</div><div class="space">Antonius Sumera</div>
@@ -259,17 +263,17 @@ function htmlTandaTerima(tt) {
     .join('');
   const body = `
     <div class="doc">
-      ${headerBlock('TANDA TERIMA', [`No. ${tt.no_dokumen}`, `Tanggal: ${fmtTanggal(tt.tanggal)}`], true)}
+      ${headerBlock('TANDA TERIMA', [`<span style="font-size: 24px; font-weight: bold;">No. ${tt.no_dokumen}</span>`, fmtTanggal(tt.tanggal)], true)}
       <div class="meta">
-        <div><span class="lbl">Diserahkan oleh</span>: ${tt.diserahkan_oleh || ''}</div>
-        <div><span class="lbl">Diterima oleh</span>: ${tt.diterima_oleh || '-'}</div>
+        <div><span class="lbl-lg">Diserahkan oleh</span>: ${tt.diserahkan_oleh || ''}</div>
+        <div><span class="lbl-lg">Diterima oleh</span>: ${tt.diterima_oleh || '-'}</div>
       </div>
       <table>
-        <thead><tr><th>No</th><th>No. Invoice</th><th>Tgl Invoice</th><th>No. PO</th><th>Tanggal PO</th><th>Jumlah (Rp)</th></tr></thead>
+        <thead><tr><th class="center">No</th><th class="center">No. Invoice</th><th class="center">Tgl Invoice</th><th class="center">No. PO</th><th class="center">Tanggal PO</th><th class="center">Jumlah (Rp)</th></tr></thead>
         <tbody>${rows}</tbody>
         <tfoot><tr><td colspan="5" class="num">GRAND TOTAL</td><td class="num">${rupiah(tt.total)}</td></tr></tfoot>
       </table>
-      <div class="terbilang">Terbilang: # ${terbilang(tt.total)} Rupiah #</div>
+      <div class="terbilang" style="font-style: italic;">Terbilang: ${terbilang(tt.total)} Rupiah.</div>
       <div class="sign">
         <div><div>Yang Menyerahkan,</div><div class="space">( ${tt.diserahkan_oleh || '................'} )</div></div>
         <div><div>Yang Menerima,</div><div class="space">( ${tt.diterima_oleh || '................'} )</div></div>
@@ -336,7 +340,7 @@ const reportCss = `
   .judul .periode { font-size: 10.5pt; color: #333; margin-top: 1mm; }
   .section-title { font-size: 11pt; font-weight: bold; margin: 6mm 0 2mm; }
   table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
-  th, td { border: 1px solid #444; padding: 2mm 2.5mm; text-align: left; vertical-align: top; }
+  th, td { border: 1px solid #000; padding: 2mm 2.5mm; text-align: left; vertical-align: top; }
   th { background: #eee; font-weight: bold; }
   .num { text-align: right; }
   tfoot td { font-weight: bold; border-top: 2px solid #111; }
@@ -369,7 +373,7 @@ function htmlLaporanBulanan({ bulan, tahun, sj, invoices, totalInvoice }) {
     : `<tr><td colspan="7" style="text-align:center">Tidak ada data</td></tr>`;
 
   const body = `
-    ${reportHeader('LAPORAN BULANAN — SURAT JALAN & INVOICE', periode)}
+    ${reportHeader('LAPORAN BULANAN', periode)}
     <div class="section-title">LAPORAN</div>
     <table>
       <thead><tr><th>No PO</th><th>Tanggal PO</th><th>No SJ</th><th>Tanggal SJ</th><th>No Invoice</th><th>Tgl Invoice</th><th>Jumlah</th></tr></thead>
