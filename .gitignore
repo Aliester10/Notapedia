@@ -18,3 +18,6 @@ Thumbs.db
 # Tool lokal
 .commandcode/
 vite.config.js.timestamp-*
+
+# Database runtime
+database.sqlite
