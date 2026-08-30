@@ -127,38 +127,36 @@ export default function SJDetail() {
             <h3 className="font-semibold text-slate-900">Detail Barang yang Dikirim</h3>
             <StatusBadge status={sj.status} />
           </div>
-          <table className="w-full text-sm">
-            <thead className="text-xs text-slate-500 border-b border-slate-200">
-              <tr>
-                <th className="text-left py-2 font-medium">Nama Barang</th>
-                <th className="text-right py-2 font-medium w-24">Qty Kirim</th>
-                <th className="text-right py-2 font-medium w-24">Qty diterima client</th>
-                <th className="text-right py-2 font-medium w-20">Berat (kg)</th>
-                <th className="text-left py-2 font-medium">Keterangan</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sj.items.map((it) => (
-                <tr key={it.id} className="border-b border-slate-100 last:border-0">
-                  <td className="py-3 font-medium text-slate-800">{it.nama_barang}</td>
-                  <td className="py-3 text-right text-slate-600">{formatNumber(it.qty_kirim)}</td>
-                  <td className="py-3 text-right">
+          <div className="overflow-hidden rounded-lg border border-slate-200">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 text-xs uppercase text-slate-500 border-b border-slate-200">
+                <tr className="divide-x divide-slate-200">
+                  <th className="px-4 py-3 text-center font-medium">Nama Barang</th>
+                  <th className="px-4 py-3 text-center font-medium w-32">Qty Kirim</th>
+                  <th className="px-4 py-3 text-center font-medium w-36">Qty diterima client</th>
+                  <th className="px-4 py-3 text-center font-medium">Keterangan</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sj.items.map((it) => (
+                  <tr key={it.id} className="divide-x divide-slate-100 border-b border-slate-100 last:border-0">
+                    <td className="px-4 py-3 font-medium text-slate-800">{it.nama_barang}</td>
+                    <td className="px-4 py-3 text-right text-slate-600">{formatNumber(it.qty_kirim)}</td>
+                  <td className="px-4 py-3 text-right">
                     {it.qty_diterima > 0 ? (
                       <span className="font-medium text-emerald-700">{formatNumber(it.qty_diterima)}</span>
                     ) : (
                       <span className="text-slate-400">-</span>
                     )}
                   </td>
-                  <td className="py-3 text-right text-slate-600">
-                    {it.berat > 0 ? formatNumber(it.berat) : '-'}
-                  </td>
-                  <td className="py-3 text-slate-600">
+                  <td className="px-4 py-3 text-left text-slate-600">
                     {it.keterangan || '-'}
                   </td>
                 </tr>
               ))}
             </tbody>
-          </table>
+            </table>
+          </div>
 
           {sj.items.some((it) => it.retur.length > 0) && (
             <div className="mt-5">
@@ -221,7 +219,7 @@ export default function SJDetail() {
         <div className="overflow-hidden rounded-lg border border-slate-200">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-xs text-slate-500">
-              <tr>
+              <tr className="divide-x divide-slate-200">
                 <th className="text-left px-3 py-2 font-medium">Nama Barang</th>
                 <th className="text-right px-3 py-2 font-medium w-24">Qty Kirim</th>
                 <th className="text-right px-3 py-2 font-medium w-28">Qty diterima client</th>
@@ -232,7 +230,7 @@ export default function SJDetail() {
               {sj.items.map((it) => {
                 const v = penerimaan[it.id] ?? { diterima: '', ditolak: '' };
                 return (
-                  <tr key={it.id} className="border-t border-slate-200">
+                  <tr key={it.id} className="divide-x divide-slate-100 border-t border-slate-200">
                     <td className="px-3 py-2 font-medium text-slate-800">{it.nama_barang}</td>
                     <td className="px-3 py-2 text-right text-slate-600">{formatNumber(it.qty_kirim)}</td>
                     <td className="px-3 py-2">

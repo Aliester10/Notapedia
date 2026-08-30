@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { ChevronLeft, Save } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
-import { listPO, createSJ } from '../data/api';
+import { listPO, createSJ, getSJ, updateSJ } from '../data/api';
 import { formatNumber, sisaItem } from '../data/mockData';
 
 export default function SJForm() {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isEdit = !!id;
   const [params] = useSearchParams();
   const [poList, setPoList] = useState([]);
   const [poId, setPoId] = useState(params.get('po') ?? '');
@@ -18,8 +20,34 @@ export default function SJForm() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    listPO().then(setPoList).catch(console.error);
-  }, []);
+    listPO().then((pos) => {
+      setPoList(pos);
+      if (isEdit) {
+        getSJ(id).then((sj) => {
+          if (!sj) {
+            setError('Surat Jalan tidak ditemukan.');
+            return;
+          }
+          if (sj.status !== 'Terkirim') {
+            setError('Surat Jalan sudah dikonfirmasi, tidak dapat diedit.');
+          }
+          setPoId(String(sj.po_id));
+          setTanggal(sj.tanggal_kirim);
+          setPengirim(sj.nama_pengirim);
+          setCatatan(sj.catatan || '');
+          const initialItems = {};
+          sj.items.forEach((it) => {
+            initialItems[it.po_item_id] = {
+              qty_kirim: it.qty_kirim,
+              berat: it.berat || '',
+              keterangan: it.keterangan || ''
+            };
+          });
+          setItems(initialItems);
+        }).catch((e) => setError(e.message));
+      }
+    }).catch(console.error);
+  }, [id, isEdit]);
 
   const po = poList.find((p) => p.id === Number(poId));
 
@@ -58,8 +86,15 @@ export default function SJForm() {
           keterangan: items[it.id]?.keterangan || '',
         })),
       };
-      const result = await createSJ(payload);
-      if (print) {
+      
+      let result;
+      if (isEdit) {
+        result = await updateSJ(id, payload);
+      } else {
+        result = await createSJ(payload);
+      }
+      
+      if (print && !isEdit) {
         await window.notapedia?.print?.document?.('sj', { ...payload, id: result.id, no_sj: result.no_sj, no_po: po.no_po, client_nama: po.client_nama });
       }
       navigate('/surat-jalan');
@@ -77,8 +112,8 @@ export default function SJForm() {
       </Link>
 
       <PageHeader
-        title="Buat Surat Jalan"
-        subtitle="Pilih PO asal, lalu tentukan barang & qty yang akan dikirim (maksimal sebesar sisa qty PO)."
+        title={isEdit ? "Edit Surat Jalan" : "Buat Surat Jalan"}
+        subtitle={isEdit ? "Ubah detail pengiriman Surat Jalan." : "Pilih PO asal, lalu tentukan barang & qty yang akan dikirim (maksimal sebesar sisa qty PO)."}
       />
 
       {error && (
@@ -90,7 +125,7 @@ export default function SJForm() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="label">Referensi PO</label>
-              <select className="input" value={poId} onChange={(e) => pilihPO(e.target.value)} required>
+              <select className="input" value={poId} onChange={(e) => pilihPO(e.target.value)} required disabled={isEdit}>
                 <option value="">-- Pilih PO --</option>
                 {poList.map((p) => (
                   <option key={p.id} value={p.id}>{p.no_po} — {p.client_nama}</option>
@@ -125,13 +160,12 @@ export default function SJForm() {
               <div className="overflow-hidden rounded-lg border border-slate-200">
                 <table className="w-full text-sm">
                   <thead className="bg-slate-50 text-xs text-slate-500">
-                    <tr>
-                      <th className="text-left px-3 py-2 font-medium">Nama Barang</th>
+                    <tr className="divide-x divide-slate-200">
+                      <th className="text-center px-3 py-2 font-medium">Nama Barang</th>
                       <th className="text-center px-3 py-2 font-medium w-20">Satuan</th>
-                      <th className="text-right px-3 py-2 font-medium w-24">Sisa PO</th>
-                      <th className="text-right px-3 py-2 font-medium w-28">Qty Kirim</th>
-                      <th className="text-right px-3 py-2 font-medium w-20">Berat (kg)</th>
-                      <th className="text-left px-3 py-2 font-medium w-40">Keterangan</th>
+                      <th className="text-center px-3 py-2 font-medium w-24">Sisa PO</th>
+                      <th className="text-center px-3 py-2 font-medium w-28">Qty Kirim</th>
+                      <th className="text-center px-3 py-2 font-medium w-40">Keterangan</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -139,7 +173,7 @@ export default function SJForm() {
                       const sisa = sisaItem(it);
                       const val = items[it.id] ?? { qty_kirim: '', berat: '', keterangan: '' };
                       return (
-                        <tr key={it.id} className="border-t border-slate-200">
+                        <tr key={it.id} className="divide-x divide-slate-100 border-t border-slate-200">
                           <td className="px-3 py-2 font-medium text-slate-800">{it.nama_barang}</td>
                           <td className="px-3 py-2 text-center text-slate-600">{it.satuan}</td>
                           <td className="px-3 py-2 text-right text-slate-600">{formatNumber(sisa)}</td>
@@ -151,15 +185,6 @@ export default function SJForm() {
                               placeholder="0"
                               value={val.qty_kirim}
                               onChange={(e) => updateItem(it.id, 'qty_kirim', e.target.value)}
-                            />
-                          </td>
-                          <td className="px-3 py-2">
-                            <input
-                              type="number"
-                              className="input text-right"
-                              placeholder="0"
-                              value={val.berat}
-                              onChange={(e) => updateItem(it.id, 'berat', e.target.value)}
                             />
                           </td>
                           <td className="px-3 py-2">
