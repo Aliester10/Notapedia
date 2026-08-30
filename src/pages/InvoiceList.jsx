@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Printer, ArrowRight, RefreshCw } from 'lucide-react';
+import { Plus, Search, Printer, ArrowRight, RefreshCw, Pencil, Trash2 } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import StatusBadge from '../components/StatusBadge';
 import Modal from '../components/Modal';
 import { InvoicePrint } from '../components/PrintLayout';
-import { listInvoices, getInvoice, updateInvoiceStatus, printDocument, saveDocumentPdf } from '../data/api';
+import { listInvoices, getInvoice, updateInvoiceStatus, printDocument, saveDocumentPdf, deleteInvoice } from '../data/api';
 import { formatDate, formatRupiah } from '../data/mockData';
 
 const urutanStatus = ['Terkirim', 'Ditagih', 'Dibayar'];
@@ -76,6 +76,16 @@ export default function InvoiceList() {
     }
   };
 
+  const handleDelete = async (id, noInv) => {
+    if (!confirm(`Hapus Invoice ${noInv}?\n\nPerhatian: Menghapus Invoice akan membuat Surat Jalan terkait kembali berstatus 'Terkirim'.`)) return;
+    try {
+      await deleteInvoice(id);
+      muat();
+    } catch (err) {
+      alert(err.message || 'Gagal menghapus Invoice.');
+    }
+  };
+
   return (
     <div>
       <PageHeader
@@ -121,29 +131,29 @@ export default function InvoiceList() {
       <div className="table-wrap">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500 border-b border-slate-200">
-            <tr>
+            <tr className="divide-x divide-slate-200">
               <th className="px-4 py-3 text-center font-medium">No Invoice</th>
               <th className="px-4 py-3 text-center font-medium">No PO</th>
               <th className="px-4 py-3 text-center font-medium">No SJ</th>
-              <th className="px-4 py-3 text-left font-medium">Client</th>
-              <th className="px-4 py-3 text-left font-medium">Tgl Invoice</th>
+              <th className="px-4 py-3 text-center font-medium">Client</th>
+              <th className="px-4 py-3 text-center font-medium">Tgl Invoice</th>
               <th className="px-4 py-3 text-center font-medium">Total</th>
               <th className="px-4 py-3 text-center font-medium">Status</th>
-              <th className="px-4 py-3 text-right font-medium w-24">Aksi</th>
+              <th className="px-4 py-3 text-center font-medium w-36">Aksi</th>
             </tr>
           </thead>
           <tbody>
             {hasil.map((inv) => (
-              <tr key={inv.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
-                <td className="px-4 py-3 font-medium text-center text-slate-800">{inv.no_invoice}</td>
-                <td className="px-4 py-3 text-center text-slate-600">{inv.no_po}</td>
-                <td className="px-4 py-3 text-center text-slate-600">{inv.no_sj}</td>
-                <td className="px-4 py-3 text-slate-600">{inv.client_nama}</td>
-                <td className="px-4 py-3 text-slate-600">{formatDate(inv.tanggal_invoice)}</td>
-                <td className="px-4 py-3 text-center font-semibold text-slate-800">{formatRupiah(inv.total)}</td>
+              <tr key={inv.id} className="border-b border-slate-100 divide-x divide-slate-100 last:border-0 hover:bg-slate-50">
+                <td className="px-4 py-3 font-medium text-left text-slate-800">{inv.no_invoice}</td>
+                <td className="px-4 py-3 text-left text-slate-600">{inv.no_po}</td>
+                <td className="px-4 py-3 text-left text-slate-600">{inv.no_sj}</td>
+                <td className="px-4 py-3 text-left text-slate-600">{inv.client_nama}</td>
+                <td className="px-4 py-3 text-center text-slate-600">{formatDate(inv.tanggal_invoice)}</td>
+                <td className="px-4 py-3 text-right font-semibold text-slate-800">{formatRupiah(inv.total)}</td>
                 <td className="px-4 py-3 text-center"><StatusBadge status={inv.status} /></td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center justify-end gap-1">
+                  <div className="flex items-center justify-center gap-1">
                     <button
                       className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-brand-600"
                       title="Cetak Invoice"
@@ -153,13 +163,29 @@ export default function InvoiceList() {
                     </button>
                     {nextStatus(inv) && (
                       <button
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-amber-50 hover:text-amber-600"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-amber-50 hover:text-emerald-600"
                         title={`Ubah status ke ${nextStatus(inv)}`}
                         onClick={() => { setError(''); setStatusInv(inv); }}
                       >
                         <ArrowRight className="h-4 w-4" />
                       </button>
                     )}
+                    <>
+                      <Link
+                        to={`/invoice/${inv.id}/edit`}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-amber-50 hover:text-amber-600"
+                        title="Edit Invoice"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Link>
+                      <button
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600"
+                        title="Hapus Invoice"
+                        onClick={() => handleDelete(inv.id, inv.no_invoice)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </>
                   </div>
                 </td>
               </tr>

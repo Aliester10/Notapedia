@@ -1,24 +1,48 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ChevronLeft, Save, Printer } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
-import { listSJ, getSJ, createInvoice, printDocument } from '../data/api';
+import { listSJ, getSJ, createInvoice, updateInvoice, getInvoice, printDocument } from '../data/api';
 import { formatNumber, formatRupiah } from '../data/mockData';
 
 const statusValid = ['Diterima Penuh', 'Diterima Sebagian'];
 
 export default function InvoiceForm() {
+  const { id } = useParams();
+  const isEdit = Boolean(id);
   const navigate = useNavigate();
   const [allSJ, setAllSJ] = useState([]);
   const [sjId, setSjId] = useState('');
+  const [noInvoice, setNoInvoice] = useState('');
   const [tanggal, setTanggal] = useState('');
+  const [rest, setRest] = useState('');
   const [harga, setHarga] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     listSJ().then(setAllSJ).catch(console.error);
-  }, []);
+    if (isEdit) {
+      getInvoice(id).then((inv) => {
+        if (!inv) return;
+        setNoInvoice(inv.no_invoice);
+        setTanggal(inv.tanggal_invoice);
+        setRest(inv.rest || '');
+        setSjId(inv.sj_id);
+        
+        getSJ(Number(inv.sj_id)).then((s) => {
+          if (!s) return;
+          const h = {};
+          s.items.forEach((it) => {
+            const invItem = inv.items.find((i) => i.nama_barang === it.nama_barang);
+            h[it.id] = invItem ? invItem.harga_satuan : '';
+          });
+          setHarga(h);
+          setSelected(s);
+        });
+      }).catch(console.error);
+    }
+  }, [id, isEdit]);
 
   const sjTersedia = allSJ.filter((sj) => statusValid.includes(sj.status));
 
@@ -54,8 +78,10 @@ export default function InvoiceForm() {
     setLoading(true);
     try {
       const payload = {
+        no_invoice: noInvoice,
         sj_id: Number(sjId),
         tanggal_invoice: tanggal,
+        rest,
         items: sj.items.map((it) => ({
           nama_barang: it.nama_barang,
           satuan: it.satuan,
@@ -63,7 +89,13 @@ export default function InvoiceForm() {
           harga_satuan: Number(harga[it.id]) || 0,
         })),
       };
-      const result = await createInvoice(payload);
+      
+      let result;
+      if (isEdit) {
+        result = await updateInvoice(id, payload);
+      } else {
+        result = await createInvoice(payload);
+      }
       if (print) {
         const invData = {
           id: result.id,
@@ -71,9 +103,8 @@ export default function InvoiceForm() {
           no_po: sj.no_po,
           no_sj: sj.no_sj,
           client_nama: sj.client_nama,
-          client_alamat: sj.client_alamat,
-          client_telp: sj.client_telp,
           tanggal_invoice: tanggal,
+          rest,
           items: payload.items,
           total,
         };
@@ -94,7 +125,7 @@ export default function InvoiceForm() {
       </Link>
 
       <PageHeader
-        title="Invoice Baru"
+        title={isEdit ? 'Edit Invoice' : 'Invoice Baru'}
         subtitle="Pilih Surat Jalan yang sudah dikonfirmasi diterima, lalu isi harga satuan per item."
       />
 
@@ -106,8 +137,12 @@ export default function InvoiceForm() {
         <div className="card p-5 lg:col-span-2 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="label">No Invoice (auto-generate)</label>
-              <input type="text" className="input bg-slate-50" value="INV-XXXX (otomatis)" disabled />
+              <label className="label">No. Invoice (auto-generate)</label>
+              {isEdit ? (
+                <input type="text" className="input bg-slate-50" value={noInvoice} disabled />
+              ) : (
+                <input type="text" className="input bg-slate-50" value="INV-XXXX (otomatis)" disabled />
+              )}
             </div>
             <div>
               <label className="label">Tanggal Invoice</label>
@@ -115,7 +150,7 @@ export default function InvoiceForm() {
             </div>
             <div className="sm:col-span-2">
               <label className="label">Referensi Surat Jalan</label>
-              <select className="input" value={sjId} onChange={(e) => pilihSJ(e.target.value)} required>
+              <select className="input" value={sjId} onChange={(e) => pilihSJ(e.target.value)} required disabled={isEdit}>
                 <option value="">-- Pilih Surat Jalan --</option>
                 {sjTersedia.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -125,6 +160,10 @@ export default function InvoiceForm() {
               </select>
               <p className="mt-1 text-xs text-slate-500">Hanya SJ berstatus "Diterima Penuh" / "Diterima Sebagian" yang dapat dipilih.</p>
             </div>
+            <div className="sm:col-span-2">
+              <label className="label">Form Rest (Opsional)</label>
+              <input type="text" className="input" placeholder="Isi catatan / form rest di sini..." value={rest} onChange={(e) => setRest(e.target.value)} />
+            </div>
           </div>
 
           {sj ? (
@@ -132,12 +171,12 @@ export default function InvoiceForm() {
               <h3 className="text-sm font-semibold text-slate-900 mb-2">Item Invoice</h3>
               <div className="overflow-hidden rounded-lg border border-slate-200">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50 text-xs text-slate-500">
-                    <tr>
-                      <th className="text-left px-3 py-2 font-medium">Nama Barang</th>
+                  <thead className="bg-slate-50 text-xs text-slate-500 uppercase">
+                    <tr className="divide-x divide-slate-200">
+                      <th className="text-center px-3 py-2 font-medium">Nama Barang</th>
                       <th className="text-center px-3 py-2 font-medium w-20">Satuan</th>
-                      <th className="text-right px-3 py-2 font-medium w-20">Qty</th>
-                      <th className="text-right px-3 py-2 font-medium w-32">Harga Satuan</th>
+                      <th className="text-center px-3 py-2 font-medium w-20">Qty</th>
+                      <th className="text-center px-3 py-2 font-medium w-32">Harga Satuan</th>
                       <th className="text-center px-3 py-2 font-medium w-32">Subtotal</th>
                     </tr>
                   </thead>
@@ -145,7 +184,7 @@ export default function InvoiceForm() {
                     {sj.items.map((it) => {
                       const h = Number(harga[it.id]) || 0;
                       return (
-                        <tr key={it.id} className="border-t border-slate-200">
+                        <tr key={it.id} className="divide-x divide-slate-100 border-t border-slate-200">
                           <td className="px-3 py-2 font-medium text-slate-800">{it.nama_barang}</td>
                           <td className="px-3 py-2 text-center text-slate-600">{it.satuan}</td>
                           <td className="px-3 py-2 text-right text-slate-700">{formatNumber(it.qty_diterima)}</td>
