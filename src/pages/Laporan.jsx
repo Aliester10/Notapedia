@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Printer, FileSpreadsheet, Database, Wallet, Truck, HardDriveDownload, Trash2, RotateCcw, Search
+  Printer, FileSpreadsheet, Database, Wallet, Truck, HardDriveDownload, Trash2, RotateCcw, Search, Eye
 } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import StatusBadge from '../components/StatusBadge';
@@ -156,8 +156,7 @@ export default function Laporan() {
       <div className="border-b border-slate-200 mb-5">
         <nav className="flex gap-1">
           {[
-            { key: 'bulanan', label: 'Laporan Bulanan', icon: Truck },
-            { key: 'piutang', label: 'Rekap Piutang', icon: Wallet },
+          { key: 'bulanan', label: 'Laporan Bulanan', icon: Truck },
             { key: 'backup', label: 'Backup Database', icon: Database },
           ].map((t) => (
             <button
@@ -202,35 +201,38 @@ export default function Laporan() {
 
           <div className="card p-5 mb-6">
             <h3 className="font-semibold text-slate-900 mb-3">LAPORAN</h3>
-            <table className="w-full text-sm">
-               <thead className="text-xs text-slate-500 border-b border-slate-200">
-                <tr>
-                  <th className="text-center py-2 font-medium">No PO</th>
-                  <th className="text-left py-2 font-medium">Tanggal PO</th>
-                  <th className="text-center py-2 font-medium">No SJ</th>
-                  <th className="text-left py-2 font-medium">Tanggal SJ</th>
-                  <th className="text-center py-2 font-medium">No Invoice</th>
-                  <th className="text-left py-2 font-medium">Tgl Invoice</th>
-                  <th className="text-center py-2 font-medium">Jumlah</th>
-                  <th className="w-10"></th>
-                </tr>
+            <div className="table-wrap">
+              <table className="w-full text-sm">
+                 <thead className="bg-slate-50 text-xs uppercase text-slate-500 border-b border-slate-200">
+                  <tr className="divide-x divide-slate-200">
+                    <th className="text-center px-4 py-3 font-medium">No PO</th>
+                    <th className="text-center px-4 py-3 font-medium">Tanggal PO</th>
+                    <th className="text-center px-4 py-3 font-medium">No SJ</th>
+                    <th className="text-center px-4 py-3 font-medium">Tanggal SJ</th>
+                    <th className="text-center px-4 py-3 font-medium">No Invoice</th>
+                    <th className="text-center px-4 py-3 font-medium">Tgl Invoice</th>
+                    <th className="text-center px-4 py-3 font-medium">Jumlah</th>
+                    <th className="text-center px-4 py-3 font-medium w-16">Aksi</th>
+                  </tr>
               </thead>
               <tbody>
                 {(dataBulanan?.sj ?? []).map((sj) => (
-                  <tr key={sj.id} className="border-b border-slate-100 last:border-0">
-                    <td className="py-3 text-center text-slate-600">{sj.no_po}</td>
-                    <td className="py-3 text-slate-600">{formatDate(sj.tanggal_po)}</td>
-                    <td className="py-3 font-medium text-center text-slate-800">{sj.no_sj}</td>
-                    <td className="py-3 text-slate-600">{formatDate(sj.tanggal_kirim)}</td>
-                    <td className="py-3 text-center text-slate-600">{sj.no_invoice || '-'}</td>
-                    <td className="py-3 text-slate-600">{sj.tanggal_invoice ? formatDate(sj.tanggal_invoice) : '-'}</td>
-                    <td className="py-3 text-center text-slate-800">
+                  <tr key={sj.id} className="divide-x divide-slate-100 border-b border-slate-100 last:border-0">
+                    <td className="py-3 px-4 text-left text-slate-600">{sj.no_po}</td>
+                    <td className="py-3 px-4 text-center text-slate-600">{formatDate(sj.tanggal_po)}</td>
+                    <td className="py-3 px-4 font-medium text-center text-slate-800">{sj.no_sj}</td>
+                    <td className="py-3 px-4 text-center text-slate-600">{formatDate(sj.tanggal_kirim)}</td>
+                    <td className="py-3 px-4 text-center text-slate-600">{sj.no_invoice || '-'}</td>
+                    <td className="py-3 px-4 text-center text-slate-600">{sj.tanggal_invoice ? formatDate(sj.tanggal_invoice) : '-'}</td>
+                    <td className="py-3 px-4 text-right text-slate-800">
                       {sj.jumlah_invoice ? formatRupiah(sj.jumlah_invoice) : '-'}
                     </td>
-                    <td className="py-3 text-center">
-                      <Link to={`/surat-jalan/${sj.id}`} className="inline-flex items-center gap-1 text-brand-600 hover:text-brand-700 font-medium text-xs">
-                        <Search className="h-4 w-4" /> Detail
-                      </Link>
+                    <td className="py-3 px-4 text-center">
+                      <div className="flex items-center justify-center">
+                        <Link to={`/surat-jalan/${sj.id}`} className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-brand-600" title="Detail SJ">
+                          <Eye className="h-4 w-4" />
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -239,59 +241,13 @@ export default function Laporan() {
                 )}
               </tbody>
             </table>
+            </div>
           </div>
 
 
         </div>
       )}
 
-      {tab === 'piutang' && (
-        <div>
-          <div className="card p-5">
-            <h3 className="font-semibold text-slate-900 mb-1">Rekap Piutang per Client</h3>
-            <p className="text-sm text-slate-500 mb-4">Invoice berstatus <strong>Terkirim</strong> atau <strong>Ditagih</strong> yang belum dibayar, dikelompokkan per client.</p>
-
-            {piutang.length === 0 && (
-              <div className="text-sm text-slate-500 text-center py-6">Tidak ada piutang. Semua invoice sudah dibayar.</div>
-            )}
-
-            {piutang.map((g) => (
-              <div key={g.client_id} className="mb-5 last:mb-0 overflow-hidden rounded-lg border border-slate-200">
-                <div className="bg-slate-50 px-4 py-2.5 flex items-center justify-between">
-                  <div>
-                    <div className="font-semibold text-slate-800">{g.client_nama}</div>
-                    <div className="text-xs text-slate-500">{g.no_telp}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-xs text-slate-500">Total Piutang</div>
-                    <div className="text-lg font-bold text-red-600">{formatRupiah(g.total)}</div>
-                  </div>
-                </div>
-                <table className="w-full text-sm">
-                  <thead className="text-xs text-slate-500">
-                    <tr>
-                      <th className="text-center px-4 py-2 font-medium">No Invoice</th>
-                      <th className="text-left px-4 py-2 font-medium">Tanggal</th>
-                      <th className="text-center px-4 py-2 font-medium">Status</th>
-                      <th className="text-center px-4 py-2 font-medium">Nilai</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {g.invoices.map((inv) => (
-                      <tr key={inv.id} className="border-t border-slate-200">
-                        <td className="px-4 py-2 font-medium text-center text-slate-800">{inv.no_invoice}</td>
-                        <td className="px-4 py-2 text-slate-600">{formatDate(inv.tanggal_invoice)}</td>
-                        <td className="px-4 py-2 text-center"><StatusBadge status={inv.status} /></td>
-                        <td className="px-4 py-2 text-center font-semibold text-slate-800">{formatRupiah(inv.total)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {tab === 'backup' && (
         <div className="card p-5 max-w-2xl">
@@ -322,33 +278,39 @@ export default function Laporan() {
 
           <div className="mt-6">
             <h4 className="text-sm font-semibold text-slate-900 mb-3">Riwayat Backup</h4>
-            <table className="w-full text-sm">
-              <thead className="text-xs text-slate-500 border-b border-slate-200">
-                <tr>
-                  <th className="text-left py-2 font-medium">Tanggal</th>
-                  <th className="text-left py-2 font-medium">Lokasi</th>
-                  <th className="text-right py-2 font-medium">Ukuran</th>
-                  <th className="text-right py-2 font-medium w-20">Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {backups.map((b) => (
-                  <tr key={b.id} className="border-b border-slate-100 last:border-0">
-                    <td className="py-3 text-slate-700">{formatDate(b.tanggal)}</td>
-                    <td className="py-3 text-slate-600 break-all">{b.lokasi}</td>
-                    <td className="py-3 text-right text-slate-600">{fmtBytes(b.ukuran)}</td>
-                    <td className="py-3 text-right">
-                      <button className="inline-flex items-center gap-1 text-xs text-red-600 hover:underline" onClick={() => doDeleteBackup(b.id)}>
-                        <Trash2 className="h-3 w-3" /> Hapus
-                      </button>
-                    </td>
+            <div className="table-wrap">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-xs uppercase text-slate-500 border-b border-slate-200">
+                  <tr className="divide-x divide-slate-200">
+                    <th className="text-center px-4 py-3 font-medium">Tanggal</th>
+                    <th className="text-center px-4 py-3 font-medium">Lokasi</th>
+                    <th className="text-center px-4 py-3 font-medium w-24">Ukuran</th>
+                    <th className="text-center px-4 py-3 font-medium w-20">Aksi</th>
                   </tr>
-                ))}
-                {backups.length === 0 && (
-                  <tr><td colSpan={4} className="py-4 text-center text-sm text-slate-500">Belum ada riwayat backup.</td></tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {backups.map((b) => (
+                    <tr key={b.id} className="divide-x divide-slate-100 border-b border-slate-100 last:border-0 hover:bg-slate-50">
+                      <td className="px-4 py-3 text-center text-slate-700 whitespace-nowrap">{formatDate(b.tanggal)}</td>
+                      <td className="px-4 py-3 text-slate-600 break-all text-xs font-mono">{b.lokasi}</td>
+                      <td className="px-4 py-3 text-center text-slate-600 whitespace-nowrap">{fmtBytes(b.ukuran)}</td>
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 mx-auto"
+                          onClick={() => doDeleteBackup(b.id)}
+                          title="Hapus Backup"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {backups.length === 0 && (
+                    <tr><td colSpan={4} className="py-6 text-center text-sm text-slate-500">Belum ada riwayat backup.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
@@ -356,106 +318,61 @@ export default function Laporan() {
       <Modal open={showPreview} onClose={() => setShowPreview(false)} title="Pratinjau Cetak Laporan" wide>
         <div className="max-h-[70vh] overflow-y-auto rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-800">
           <div className="flex items-start justify-between">
-            <img src={cingcuLogo} alt="logo toko" className="h-9 w-auto" />
+            <img src={cingcuLogo} alt="logo toko" className="h-[72px] w-auto" />
             <div className="text-right text-[11px] text-slate-500">
               Dicetak: {new Date().toLocaleString('id-ID')}
             </div>
           </div>
           <div className="mt-2 border-b-2 border-slate-800" />
           <div className="mt-4 text-center">
-            <div className="text-base font-bold">
-              {tab === 'piutang' ? 'REKAP PIUTANG PER CLIENT' : 'LAPORAN BULANAN — SURAT JALAN & INVOICE'}
-            </div>
-            <div className="mt-0.5 text-xs text-slate-600">
-              {tab === 'piutang' ? 'Belum dibayar (Terkirim / Ditagih)' : `Periode: ${bulan} ${tahun}`}
-            </div>
+            <div className="text-base font-bold">LAPORAN BULANAN</div>
+            <div className="mt-0.5 text-xs text-slate-600">Periode: {bulan} {tahun}</div>
           </div>
 
-          {tab !== 'piutang' && (
-            <div className="mt-4">
+          <div className="mt-4">
               <div className="text-xs font-semibold mb-1">LAPORAN</div>
               <table className="w-full border-collapse text-xs">
                 <thead>
                   <tr className="bg-slate-100">
-                    <th className="border border-slate-500 px-1.5 py-1 text-left">No</th>
-                    <th className="border border-slate-500 px-1.5 py-1 text-center">No PO</th>
-                    <th className="border border-slate-500 px-1.5 py-1 text-left">Tanggal PO</th>
-                    <th className="border border-slate-500 px-1.5 py-1 text-center">No SJ</th>
-                    <th className="border border-slate-500 px-1.5 py-1 text-left">Tanggal SJ</th>
-                    <th className="border border-slate-500 px-1.5 py-1 text-center">No Invoice</th>
-                    <th className="border border-slate-500 px-1.5 py-1 text-left">Tgl Invoice</th>
-                    <th className="border border-slate-500 px-1.5 py-1 text-center">Jumlah</th>
+                    <th className="border border-slate-800 px-1.5 py-1 text-center">No</th>
+                    <th className="border border-slate-800 px-1.5 py-1 text-center">No PO</th>
+                    <th className="border border-slate-800 px-1.5 py-1 text-center">Tanggal PO</th>
+                    <th className="border border-slate-800 px-1.5 py-1 text-center">No SJ</th>
+                    <th className="border border-slate-800 px-1.5 py-1 text-center">Tanggal SJ</th>
+                    <th className="border border-slate-800 px-1.5 py-1 text-center">No Invoice</th>
+                    <th className="border border-slate-800 px-1.5 py-1 text-center">Tgl Invoice</th>
+                    <th className="border border-slate-800 px-1.5 py-1 text-center">Jumlah</th>
                   </tr>
                 </thead>
                 <tbody>
                   {(dataBulanan?.sj ?? []).map((sj, i) => (
                     <tr key={sj.id}>
-                      <td className="border border-slate-500 px-1.5 py-1">{i + 1}</td>
-                      <td className="border border-slate-500 px-1.5 py-1 text-center">{sj.no_po}</td>
-                      <td className="border border-slate-500 px-1.5 py-1">{formatDate(sj.tanggal_po)}</td>
-                      <td className="border border-slate-500 px-1.5 py-1 text-center">{sj.no_sj}</td>
-                      <td className="border border-slate-500 px-1.5 py-1">{formatDate(sj.tanggal_kirim)}</td>
-                      <td className="border border-slate-500 px-1.5 py-1 text-center">{sj.no_invoice || '-'}</td>
-                      <td className="border border-slate-500 px-1.5 py-1">{sj.tanggal_invoice ? formatDate(sj.tanggal_invoice) : '-'}</td>
-                      <td className="border border-slate-500 px-1.5 py-1 text-center">
+                      <td className="border border-slate-800 px-1.5 py-1 text-center">{i + 1}</td>
+                      <td className="border border-slate-800 px-1.5 py-1 text-left">{sj.no_po}</td>
+                      <td className="border border-slate-800 px-1.5 py-1 text-center">{formatDate(sj.tanggal_po)}</td>
+                      <td className="border border-slate-800 px-1.5 py-1 text-center">{sj.no_sj}</td>
+                      <td className="border border-slate-800 px-1.5 py-1 text-center">{formatDate(sj.tanggal_kirim)}</td>
+                      <td className="border border-slate-800 px-1.5 py-1 text-center">{sj.no_invoice || '-'}</td>
+                      <td className="border border-slate-800 px-1.5 py-1 text-center">{sj.tanggal_invoice ? formatDate(sj.tanggal_invoice) : '-'}</td>
+                      <td className="border border-slate-800 px-1.5 py-1 text-right">
                         {sj.jumlah_invoice ? formatRupiah(sj.jumlah_invoice) : '-'}
                       </td>
                     </tr>
                   ))}
                 </tbody>
+                <tfoot>
+                  <tr className="bg-slate-100">
+                    <td colSpan={7} className="border border-slate-800 px-1.5 py-1 text-right font-bold">TOTAL BULAN INI</td>
+                    <td className="border border-slate-800 px-1.5 py-1 text-right font-bold">
+                      {formatRupiah(dataBulanan?.totalInvoice ?? 0)}
+                    </td>
+                  </tr>
+                </tfoot>
               </table>
 
 
-            </div>
-          )}
+          </div>
 
-          {tab === 'piutang' && (
-            <div className="mt-4 space-y-4">
-              {piutang.map((g) => (
-                <div key={g.client_id}>
-                  <table className="w-full border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-slate-100">
-                        <th className="border border-slate-500 px-1.5 py-1 text-left" colSpan={4}>Client: {g.client_nama}</th>
-                      </tr>
-                      <tr>
-                        <th className="border border-slate-500 px-1.5 py-1 text-center">No Invoice</th>
-                        <th className="border border-slate-500 px-1.5 py-1 text-left">Tanggal</th>
-                        <th className="border border-slate-500 px-1.5 py-1 text-center">Status</th>
-                        <th className="border border-slate-500 px-1.5 py-1 text-center">Nilai</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {g.invoices.map((inv) => (
-                        <tr key={inv.id}>
-                          <td className="border border-slate-500 px-1.5 py-1 text-center">{inv.no_invoice}</td>
-                          <td className="border border-slate-500 px-1.5 py-1">{formatDate(inv.tanggal_invoice)}</td>
-                          <td className="border border-slate-500 px-1.5 py-1 text-center">{inv.status}</td>
-                          <td className="border border-slate-500 px-1.5 py-1 text-center">{formatRupiah(inv.total)}</td>
-                        </tr>
-                      ))}
-                      <tr className="bg-slate-100 font-semibold">
-                        <td colSpan={3} className="border border-slate-500 px-1.5 py-1 text-right">Subtotal {g.client_nama}</td>
-                        <td className="border border-slate-500 px-1.5 py-1 text-right">{formatRupiah(g.total)}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              ))}
-              {piutang.length > 0 && (
-                <table className="w-full border-collapse text-xs">
-                  <tbody>
-                    <tr className="bg-slate-200 font-bold">
-                      <td className="border border-slate-500 px-1.5 py-1 text-right" colSpan={3}>TOTAL PIUTANG</td>
-                      <td className="border border-slate-500 px-1.5 py-1 text-right">
-                        {formatRupiah(piutang.reduce((s, g) => s + g.total, 0))}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              )}
-            </div>
-          )}
 
           <div className="mt-4 text-center text-[11px] text-slate-500">
             Dokumen ini dicetak otomatis dari aplikasi Notapedia

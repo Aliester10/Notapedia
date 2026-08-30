@@ -347,7 +347,7 @@ export const formatRupiah = (n) =>
 export const formatDate = (iso) => {
   if (!iso) return '-';
   const d = new Date(iso);
-  return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+  return d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
 export const formatNumber = (n) => (n ?? 0).toLocaleString('id-ID');
