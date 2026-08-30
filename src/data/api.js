@@ -48,6 +48,7 @@ export const getPO = (id) =>
   isElectron ? call(window.notapedia.po.get, id) : Promise.resolve(mockPO.find((p) => p.id === Number(id)));
 export const createPO = (d) => (isElectron ? call(window.notapedia.po.create, d) : mockMutate());
 export const updatePO = (id, d) => (isElectron ? call(window.notapedia.po.update, id, d) : mockMutate());
+export const deletePO = (id) => (isElectron ? call(window.notapedia.po.remove, id) : mockMutate());
 export const getRiwayatPO = (id) =>
   isElectron
     ? call(window.notapedia.po.riwayat, id)
@@ -64,6 +65,8 @@ export const listSJByPO = (poId) =>
 export const getSJ = (id) =>
   isElectron ? call(window.notapedia.sj.get, id) : Promise.resolve(mockSJ.find((s) => s.id === Number(id)));
 export const createSJ = (d) => (isElectron ? call(window.notapedia.sj.create, d) : mockMutate());
+export const updateSJ = (id, d) => (isElectron ? call(window.notapedia.sj.update, id, d) : mockMutate());
+export const deleteSJ = (id) => (isElectron ? call(window.notapedia.sj.remove, id) : mockMutate());
 export const confirmSJ = (id, d) =>
   isElectron ? call(window.notapedia.sj.confirm, id, d) : Promise.resolve(mockSJ.find((s) => s.id === Number(id)));
 
@@ -72,6 +75,8 @@ export const listInvoices = () => (isElectron ? call(window.notapedia.invoice.li
 export const getInvoice = (id) =>
   isElectron ? call(window.notapedia.invoice.get, id) : Promise.resolve(mockInvoice.find((i) => i.id === Number(id)));
 export const createInvoice = (d) => (isElectron ? call(window.notapedia.invoice.create, d) : mockMutate());
+export const updateInvoice = (id, d) => (isElectron ? call(window.notapedia.invoice.update, id, d) : mockMutate());
+export const deleteInvoice = (id) => (isElectron ? call(window.notapedia.invoice.remove, id) : mockMutate());
 export const updateInvoiceStatus = (id, status) =>
   isElectron ? call(window.notapedia.invoice.updateStatus, id, status) : mockMutate();
 export const listInvoicesSiapTagih = () =>
@@ -81,7 +86,11 @@ export const listInvoicesSiapTagih = () =>
 
 // ── Tanda Terima ──
 export const listTandaTerima = () => (isElectron ? call(window.notapedia.tt.list) : Promise.resolve(mockTT));
+export const getTandaTerima = (id) =>
+  isElectron ? call(window.notapedia.tt.get, id) : Promise.resolve(mockTT.find((t) => t.id === Number(id)));
 export const createTandaTerima = (d) => (isElectron ? call(window.notapedia.tt.create, d) : mockMutate());
+export const updateTandaTerima = (id, d) => (isElectron ? call(window.notapedia.tt.update, id, d) : mockMutate());
+export const deleteTandaTerima = (id) => (isElectron ? call(window.notapedia.tt.remove, id) : mockMutate());
 
 // ── Laporan ──
 export const getLaporanBulanan = (bulan, tahun) =>
