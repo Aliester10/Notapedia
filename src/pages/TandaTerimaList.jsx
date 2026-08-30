@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Printer, RefreshCw } from 'lucide-react';
+import { Plus, Printer, RefreshCw, Pencil, Trash2 } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import Modal from '../components/Modal';
 import { TandaTerimaPrint } from '../components/PrintLayout';
-import { listTandaTerima, listInvoicesSiapTagih, printDocument, saveDocumentPdf } from '../data/api';
+import { listTandaTerima, listInvoicesSiapTagih, printDocument, saveDocumentPdf, deleteTandaTerima } from '../data/api';
 import { formatDate, formatRupiah } from '../data/mockData';
 
 export default function TandaTerimaList() {
@@ -33,6 +33,16 @@ export default function TandaTerimaList() {
     }
   };
 
+  const hapus = async (id, dok) => {
+    if (!confirm(`Hapus Tanda Terima ${dok}?`)) return;
+    try {
+      await deleteTandaTerima(id);
+      muat();
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+
   return (
     <div>
       <PageHeader
@@ -53,32 +63,49 @@ export default function TandaTerimaList() {
       <div className="table-wrap mb-6">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500 border-b border-slate-200">
-            <tr>
-              <th className="px-4 py-3 text-left font-medium">No Dokumen</th>
-              <th className="px-4 py-3 text-left font-medium">Tanggal</th>
-              <th className="px-4 py-3 text-left font-medium">Diserahkan Oleh</th>
-              <th className="px-4 py-3 text-left font-medium">Diterima Oleh</th>
+            <tr className="divide-x divide-slate-200">
+              <th className="px-4 py-3 text-center font-medium">No Dokumen</th>
+              <th className="px-4 py-3 text-center font-medium">Tanggal</th>
+              <th className="px-4 py-3 text-center font-medium">Diserahkan Oleh</th>
+              <th className="px-4 py-3 text-center font-medium">Diterima Oleh</th>
               <th className="px-4 py-3 text-center font-medium w-20">Invoice</th>
               <th className="px-4 py-3 text-center font-medium">Total</th>
-              <th className="px-4 py-3 text-right font-medium w-16">Aksi</th>
+              <th className="px-4 py-3 text-center font-medium w-32">Aksi</th>
             </tr>
           </thead>
           <tbody>
             {tandaTerimaList.map((tt) => (
-              <tr key={tt.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+              <tr key={tt.id} className="divide-x divide-slate-100 border-b border-slate-100 last:border-0 hover:bg-slate-50">
                 <td className="px-4 py-3 font-medium text-slate-800">{tt.no_dokumen}</td>
-                <td className="px-4 py-3 text-slate-600">{formatDate(tt.tanggal)}</td>
+                <td className="px-4 py-3 text-center text-slate-600">{formatDate(tt.tanggal)}</td>
                 <td className="px-4 py-3 text-slate-600">{tt.diserahkan_oleh}</td>
                 <td className="px-4 py-3 text-slate-600">{tt.diterima_oleh}</td>
                 <td className="px-4 py-3 text-center text-slate-600">{tt.items.length}</td>
                 <td className="px-4 py-3 text-center font-semibold text-slate-800">{formatRupiah(tt.total)}</td>
-                <td className="px-4 py-3 text-right">
-                  <button
-                    className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-brand-600"
-                    onClick={() => setPrintTT(tt)}
-                  >
-                    <Printer className="h-4 w-4" />
-                  </button>
+                <td className="px-4 py-3 text-center">
+                  <div className="flex items-center justify-center gap-1">
+                    <button
+                      className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-brand-600"
+                      onClick={() => setPrintTT(tt)}
+                      title="Cetak"
+                    >
+                      <Printer className="h-4 w-4" />
+                    </button>
+                    <Link
+                      to={`/tanda-terima/${tt.id}/edit`}
+                      className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-blue-600"
+                      title="Edit"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Link>
+                    <button
+                      className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-red-600"
+                      onClick={() => hapus(tt.id, tt.no_dokumen)}
+                      title="Hapus"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -98,7 +125,7 @@ export default function TandaTerimaList() {
           <div className="overflow-hidden rounded-lg border border-slate-200">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-xs text-slate-500">
-                <tr>
+                <tr className="divide-x divide-slate-200">
                   <th className="text-center px-3 py-2 font-medium">No Invoice</th>
                   <th className="text-left px-3 py-2 font-medium">Client</th>
                   <th className="text-center px-3 py-2 font-medium w-32">Nilai</th>
@@ -106,7 +133,7 @@ export default function TandaTerimaList() {
               </thead>
               <tbody>
                 {invoicesSiap.map((inv) => (
-                  <tr key={inv.id} className="border-t border-slate-200">
+                  <tr key={inv.id} className="divide-x divide-slate-100 border-t border-slate-200">
                     <td className="px-3 py-2 font-medium text-center text-slate-800">{inv.no_invoice}</td>
                     <td className="px-3 py-2 text-slate-600">{inv.client_nama}</td>
                     <td className="px-3 py-2 text-center font-semibold text-slate-800">{formatRupiah(inv.total)}</td>
