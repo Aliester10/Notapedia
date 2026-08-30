@@ -27,21 +27,21 @@ function err(msg) {
 // ─────────────────────────── CLIENT ───────────────────────────
 
 export function listClients() {
-  return getDb().prepare('SELECT id, nama, alamat, no_telp, created_at FROM client ORDER BY nama').all();
+  return getDb().prepare('SELECT id, nama, created_at FROM client ORDER BY nama').all();
 }
 
-export function createClient({ nama, alamat = '', no_telp = '' }) {
+export function createClient({ nama }) {
   if (!nama?.trim()) throw err('Nama client wajib diisi.');
   const d = getDb();
-  const r = d.prepare('INSERT INTO client (nama, alamat, no_telp) VALUES (?,?,?)')
-    .run(nama.trim(), alamat.trim(), no_telp.trim());
+  const r = d.prepare('INSERT INTO client (nama) VALUES (?)')
+    .run(nama.trim());
   return { id: r.lastInsertRowid };
 }
 
-export function updateClient(id, { nama, alamat = '', no_telp = '' }) {
+export function updateClient(id, { nama }) {
   if (!nama?.trim()) throw err('Nama client wajib diisi.');
-  getDb().prepare('UPDATE client SET nama=?, alamat=?, no_telp=? WHERE id=?')
-    .run(nama.trim(), alamat.trim(), no_telp.trim(), id);
+  getDb().prepare('UPDATE client SET nama=? WHERE id=?')
+    .run(nama.trim(), id);
   return { id };
 }
 
@@ -82,7 +82,7 @@ export function listPO() {
 export function getPO(id) {
   const d = getDb();
   const po = d.prepare(`
-    SELECT p.id, p.no_po, p.client_id, c.nama AS client_nama, c.alamat, c.no_telp,
+    SELECT p.id, p.no_po, p.client_id, c.nama AS client_nama,
            p.tanggal_po, p.status, p.catatan, p.created_at
     FROM po p JOIN client c ON c.id = p.client_id WHERE p.id=?
   `).get(id);
@@ -132,14 +132,26 @@ export function updatePO(id, { no_po, client_id, tanggal_po, catatan = '', items
   tx();
   return { id };
 }
+export function removePO(id) {
+  const d = getDb();
+  const sudahSJ = d.prepare('SELECT COUNT(*) AS n FROM surat_jalan WHERE po_id=?').get(id).n > 0;
+  if (sudahSJ) throw err('PO tidak bisa dihapus karena sudah memiliki Surat Jalan.');
+
+  const tx = d.transaction(() => {
+    d.prepare('DELETE FROM po_item WHERE po_id=?').run(id);
+    d.prepare('DELETE FROM po WHERE id=?').run(id);
+  });
+  tx();
+  return { id };
+}
 
 // ─────────────────────────── SURAT JALAN ───────────────────────────
 
 function sjDetail(sjId) {
   const d = getDb();
   const sj = d.prepare(`
-    SELECT s.id, s.no_sj, s.po_id, p.no_po, c.nama AS client_nama, c.alamat AS client_alamat,
-           c.no_telp AS client_telp, s.tanggal_kirim,
+    SELECT s.id, s.no_sj, s.po_id, p.no_po, c.nama AS client_nama,
+           s.tanggal_kirim,
            s.nama_pengirim, s.status, s.catatan, s.created_at
     FROM surat_jalan s
     JOIN po p ON p.id = s.po_id
@@ -241,6 +253,86 @@ export function createSJ({ po_id, tanggal_kirim, nama_pengirim = '', catatan = '
   return tx();
 }
 
+export function updateSJ(id, { tanggal_kirim, nama_pengirim = '', catatan = '', items = [] }) {
+  if (!tanggal_kirim) throw err('Tanggal kirim wajib diisi.');
+  if (!items.length || items.every((i) => !(Number(i.qty_kirim) > 0)))
+    throw err('Minimal satu item dengan qty kirim > 0.');
+
+  const d = getDb();
+  const sj = d.prepare('SELECT id, po_id, status FROM surat_jalan WHERE id=?').get(id);
+  if (!sj) throw err('Surat Jalan tidak ditemukan.');
+  if (sj.status !== 'Terkirim') throw err('Surat Jalan tidak dapat diedit karena statusnya sudah tidak Terkirim.');
+
+  const sudahInvoice = d.prepare('SELECT COUNT(*) AS n FROM invoice WHERE sj_id=?').get(id).n > 0;
+  if (sudahInvoice) throw err('Surat Jalan tidak dapat diedit karena sudah memiliki Invoice.');
+
+  const tx = d.transaction(() => {
+    for (const it of items) {
+      const qty = Number(it.qty_kirim);
+      if (!(qty > 0)) continue;
+
+      const pi = d.prepare(`
+        SELECT qty_pesan, qty_terkirim,
+               COALESCE((
+                 SELECT SUM(si.qty_kirim) FROM sj_item si
+                 JOIN surat_jalan s ON s.id = si.sj_id
+                 WHERE si.po_item_id = po_item.id AND s.status = 'Terkirim' AND s.id != ?
+               ), 0) AS qty_sj
+        FROM po_item WHERE id=? AND po_id=?
+      `).get(id, it.po_item_id, sj.po_id);
+
+      if (!pi) throw err('Item PO tidak valid.');
+      const sisa = pi.qty_pesan - pi.qty_terkirim - pi.qty_sj;
+      if (qty > sisa) throw err(`Qty kirim melebihi sisa PO untuk item ini (sisa ${sisa}).`);
+    }
+
+    d.prepare('UPDATE surat_jalan SET tanggal_kirim=?, nama_pengirim=?, catatan=? WHERE id=?')
+      .run(tanggal_kirim, nama_pengirim.trim(), catatan.trim(), id);
+
+    d.prepare('DELETE FROM sj_item WHERE sj_id=?').run(id);
+
+    const ins = d.prepare('INSERT INTO sj_item (sj_id, po_item_id, qty_kirim, qty_diterima, berat, keterangan) VALUES (?,?,?,0,?,?)');
+    for (const it of items) {
+      const qty = Number(it.qty_kirim);
+      if (qty > 0) ins.run(id, it.po_item_id, qty, Number(it.berat) || 0, it.keterangan?.trim() || '');
+    }
+  });
+  tx();
+  return { id };
+}
+
+export function removeSJ(id) {
+  const d = getDb();
+  const sj = d.prepare('SELECT id, po_id FROM surat_jalan WHERE id=?').get(id);
+  if (!sj) throw err('Surat Jalan tidak ditemukan.');
+
+  const sudahInvoice = d.prepare('SELECT COUNT(*) AS n FROM invoice WHERE sj_id=?').get(id).n > 0;
+  if (sudahInvoice) throw err('Surat Jalan tidak bisa dihapus karena sudah ditagihkan (memiliki Invoice).');
+
+  const tx = d.transaction(() => {
+    d.prepare('DELETE FROM retur WHERE sj_item_id IN (SELECT id FROM sj_item WHERE sj_id=?)').run(id);
+    d.prepare('DELETE FROM sj_item WHERE sj_id=?').run(id);
+    d.prepare('DELETE FROM surat_jalan WHERE id=?').run(id);
+
+    const poItems = d.prepare('SELECT id FROM po_item WHERE po_id=?').all(sj.po_id);
+    const updPOItem = d.prepare(`
+      UPDATE po_item SET qty_terkirim = COALESCE((
+        SELECT SUM(si.qty_diterima) FROM sj_item si
+        JOIN surat_jalan s ON s.id = si.sj_id
+        WHERE si.po_item_id = po_item.id AND s.status IN ('Diterima Penuh', 'Diterima Sebagian')
+      ), 0) WHERE id=?
+    `);
+    for (const pItem of poItems) updPOItem.run(pItem.id);
+
+    const sisa = d.prepare(`
+      SELECT COUNT(*) AS n FROM po_item WHERE po_id=? AND qty_terkirim < qty_pesan
+    `).get(sj.po_id).n;
+    d.prepare('UPDATE po SET status=? WHERE id=?').run(sisa === 0 ? 'Selesai' : 'Open', sj.po_id);
+  });
+  tx();
+  return { id };
+}
+
 export function confirmSJ(sjId, { items = [], alasan = '' }) {
   const d = getDb();
   const sj = d.prepare('SELECT id, po_id, status FROM surat_jalan WHERE id=?').get(sjId);
@@ -305,7 +397,7 @@ function invoiceDetail(invId) {
   const d = getDb();
   const inv = d.prepare(`
     SELECT i.id, i.no_invoice, i.po_id, p.no_po, i.sj_id, s.no_sj, c.id AS client_id,
-           c.nama AS client_nama, c.alamat AS client_alamat, c.no_telp AS client_telp,
+           c.nama AS client_nama, COALESCE(i.rest, i.resi) AS rest,
            i.tanggal_invoice, i.status, i.tanggal_ditagih,
            i.tanggal_dibayar, i.total, i.created_at
     FROM invoice i
@@ -323,7 +415,7 @@ function invoiceDetail(invId) {
 
 export function listInvoices() {
   return getDb().prepare(`
-    SELECT i.id, i.no_invoice, i.po_id, p.no_po, i.sj_id, s.no_sj, c.nama AS client_nama,
+    SELECT i.id, i.no_invoice, i.po_id, p.no_po, i.sj_id, s.no_sj, c.nama AS client_nama, COALESCE(i.rest, i.resi) AS rest,
            i.tanggal_invoice, i.status, i.tanggal_ditagih, i.tanggal_dibayar, i.total
     FROM invoice i
     JOIN po p ON p.id = i.po_id
@@ -335,7 +427,7 @@ export function listInvoices() {
 
 export function listInvoiceByPO(poId) {
   return getDb().prepare(`
-    SELECT i.id, i.no_invoice, i.po_id, p.no_po, i.sj_id, s.no_sj, c.nama AS client_nama,
+    SELECT i.id, i.no_invoice, i.po_id, p.no_po, i.sj_id, s.no_sj, c.nama AS client_nama, COALESCE(i.rest, i.resi) AS rest,
            i.tanggal_invoice, i.status, i.tanggal_ditagih, i.tanggal_dibayar, i.total
     FROM invoice i
     JOIN po p ON p.id = i.po_id
@@ -353,7 +445,8 @@ export function sjSudahDiinvoice(sjId) {
   return getDb().prepare('SELECT id FROM invoice WHERE sj_id=?').get(sjId);
 }
 
-export function createInvoice({ sj_id, tanggal_invoice, items = [] }) {
+export function createInvoice({ no_invoice, sj_id, tanggal_invoice, rest, resi, items = [] }) {
+  const finalRest = rest || resi;
   if (!sj_id) throw err('Referensi Surat Jalan wajib dipilih.');
   if (!tanggal_invoice) throw err('Tanggal invoice wajib diisi.');
   if (!items.length || items.some((i) => !(Number(i.qty) > 0) || !(Number(i.harga_satuan) >= 0)))
@@ -370,7 +463,10 @@ export function createInvoice({ sj_id, tanggal_invoice, items = [] }) {
     if (sjSudahDiinvoice(sj_id))
       throw err('Surat Jalan ini sudah memiliki invoice.');
 
-    const noInv = nextNo('INV', 'invoice');
+    const finalNoInvoice = no_invoice?.trim() || nextNo('INV', 'invoice');
+    const exists = d.prepare('SELECT id FROM invoice WHERE no_invoice=?').get(finalNoInvoice);
+    if (exists) throw err(`No Invoice "${finalNoInvoice}" sudah terpakai.`);
+
     let total = 0;
     const rows = items.map((it) => {
       const subtotal = Number(it.qty) * Number(it.harga_satuan);
@@ -385,10 +481,11 @@ export function createInvoice({ sj_id, tanggal_invoice, items = [] }) {
     });
 
     const r = d.prepare(`
-      INSERT INTO invoice (no_invoice, po_id, sj_id, tanggal_invoice, status, total)
-      VALUES (?,?,?,?,?,?)
-    `).run(noInv, sj.po_id, sj_id, tanggal_invoice, 'Terkirim', total);
+      INSERT INTO invoice (no_invoice, po_id, sj_id, tanggal_invoice, rest, status, total)
+      VALUES (?,?,?,?,?,?,?)
+    `).run(finalNoInvoice, sj.po_id, sj_id, tanggal_invoice, finalRest ? finalRest.trim() : null, 'Terkirim', total);
     const invId = r.lastInsertRowid;
+    const noInv = finalNoInvoice;
 
     const ins = d.prepare('INSERT INTO invoice_item (invoice_id, nama_barang, satuan, qty, harga_satuan, subtotal) VALUES (?,?,?,?,?,?)');
     for (const row of rows) ins.run(invId, row.nama_barang, row.satuan, row.qty, row.harga_satuan, row.subtotal);
@@ -396,6 +493,62 @@ export function createInvoice({ sj_id, tanggal_invoice, items = [] }) {
     return { id: invId, no_invoice: noInv };
   });
   return tx();
+}
+
+export function updateInvoice(id, { no_invoice, tanggal_invoice, rest, resi, items = [] }) {
+  const finalRest = rest || resi;
+  if (!no_invoice?.trim()) throw err('Nomor invoice wajib diisi.');
+  if (!tanggal_invoice) throw err('Tanggal invoice wajib diisi.');
+  if (!items.length || items.some((i) => !(Number(i.qty) > 0) || !(Number(i.harga_satuan) >= 0)))
+    throw err('Minimal satu item dengan qty dan harga satuan valid.');
+
+  const d = getDb();
+  const tx = d.transaction(() => {
+    const inv = d.prepare('SELECT status, no_invoice FROM invoice WHERE id=?').get(id);
+    if (!inv) throw err('Invoice tidak ditemukan.');
+
+    if (inv.no_invoice !== no_invoice.trim()) {
+      const exists = d.prepare('SELECT id FROM invoice WHERE no_invoice=?').get(no_invoice.trim());
+      if (exists) throw err(`No Invoice "${no_invoice}" sudah terpakai.`);
+    }
+
+    let total = 0;
+    const rows = items.map((it) => {
+      const subtotal = Number(it.qty) * Number(it.harga_satuan);
+      total += subtotal;
+      return {
+        nama_barang: it.nama_barang.trim(),
+        satuan: it.satuan?.trim() ?? '',
+        qty: Number(it.qty),
+        harga_satuan: Number(it.harga_satuan),
+        subtotal,
+      };
+    });
+
+    d.prepare(`
+      UPDATE invoice SET no_invoice=?, tanggal_invoice=?, rest=?, total=? WHERE id=?
+    `).run(no_invoice.trim(), tanggal_invoice, finalRest ? finalRest.trim() : null, total, id);
+
+    d.prepare('DELETE FROM invoice_item WHERE invoice_id=?').run(id);
+
+    const ins = d.prepare('INSERT INTO invoice_item (invoice_id, nama_barang, satuan, qty, harga_satuan, subtotal) VALUES (?,?,?,?,?,?)');
+    for (const row of rows) ins.run(id, row.nama_barang, row.satuan, row.qty, row.harga_satuan, row.subtotal);
+
+    return { id, no_invoice: no_invoice.trim() };
+  });
+  return tx();
+}
+
+export function removeInvoice(id) {
+  const d = getDb();
+  const tx = d.transaction(() => {
+    const inv = d.prepare('SELECT status FROM invoice WHERE id=?').get(id);
+    if (!inv) throw err('Invoice tidak ditemukan.');
+
+    d.prepare('DELETE FROM invoice_item WHERE invoice_id=?').run(id);
+    d.prepare('DELETE FROM invoice WHERE id=?').run(id);
+  });
+  tx();
 }
 
 export function updateInvoiceStatus(id, status) {
@@ -462,8 +615,8 @@ export function getTandaTerima(id) {
 
 export function createTandaTerima({ tanggal, diserahkan_oleh = '', diterima_oleh = '', items = [] }) {
   if (!tanggal) throw err('Tanggal wajib diisi.');
-  const valid = items.filter((i) => i.invoice_id && i.no_sbi?.trim());
-  if (!valid.length) throw err('Minimal satu baris invoice dengan No SBI.');
+  const valid = items.filter((i) => i.invoice_id);
+  if (!valid.length) throw err('Minimal satu baris invoice yang dipilih.');
 
   const d = getDb();
   const tx = d.transaction(() => {
@@ -473,7 +626,7 @@ export function createTandaTerima({ tanggal, diserahkan_oleh = '', diterima_oleh
       const inv = d.prepare('SELECT id, total FROM invoice WHERE id=?').get(it.invoice_id);
       if (!inv) throw err('Invoice tidak ditemukan.');
       total += inv.total;
-      return { invoice_id: inv.id, no_sbi: it.no_sbi.trim(), jumlah: inv.total };
+      return { invoice_id: inv.id, no_sbi: it.no_sbi?.trim() || '', jumlah: inv.total };
     });
 
     const r = d.prepare(`
@@ -488,6 +641,47 @@ export function createTandaTerima({ tanggal, diserahkan_oleh = '', diterima_oleh
     return { id: ttId, no_dokumen: noDok };
   });
   return tx();
+}
+
+export function updateTandaTerima(id, { tanggal, diserahkan_oleh = '', diterima_oleh = '', items = [] }) {
+  if (!id) throw err('ID Tanda Terima tidak valid.');
+  if (!tanggal) throw err('Tanggal wajib diisi.');
+  const valid = items.filter((i) => i.invoice_id);
+  if (!valid.length) throw err('Minimal satu baris invoice yang dipilih.');
+
+  const d = getDb();
+  const tx = d.transaction(() => {
+    let total = 0;
+    const rows = valid.map((it) => {
+      const inv = d.prepare('SELECT id, total FROM invoice WHERE id=?').get(it.invoice_id);
+      if (!inv) throw err('Invoice tidak ditemukan.');
+      total += inv.total;
+      return { invoice_id: inv.id, no_sbi: it.no_sbi?.trim() || '', jumlah: inv.total };
+    });
+
+    d.prepare(`
+      UPDATE tanda_terima SET tanggal=?, diserahkan_oleh=?, diterima_oleh=?, total=?
+      WHERE id=?
+    `).run(tanggal, diserahkan_oleh.trim(), diterima_oleh.trim(), total, id);
+
+    d.prepare('DELETE FROM tanda_terima_item WHERE tanda_terima_id=?').run(id);
+
+    const ins = d.prepare('INSERT INTO tanda_terima_item (tanda_terima_id, invoice_id, no_sbi, jumlah) VALUES (?,?,?,?)');
+    for (const row of rows) ins.run(id, row.invoice_id, row.no_sbi, row.jumlah);
+
+    return { id };
+  });
+  return tx();
+}
+
+export function removeTandaTerima(id) {
+  if (!id) throw err('ID tidak valid.');
+  const d = getDb();
+  d.transaction(() => {
+    d.prepare('DELETE FROM tanda_terima_item WHERE tanda_terima_id=?').run(id);
+    d.prepare('DELETE FROM tanda_terima WHERE id=?').run(id);
+  })();
+  return true;
 }
 
 // ─────────────────────────── LAPORAN & DASHBOARD ───────────────────────────
@@ -532,7 +726,7 @@ export function laporanBulanan(bulan, tahun) {
 export function rekapPiutang() {
   const d = getDb();
   const rows = d.prepare(`
-    SELECT i.id, i.no_invoice, c.id AS client_id, c.nama AS client_nama, c.no_telp,
+    SELECT i.id, i.no_invoice, c.id AS client_id, c.nama AS client_nama,
            i.tanggal_invoice, i.status, i.total
     FROM invoice i
     JOIN po p ON p.id = i.po_id
@@ -545,7 +739,7 @@ export function rekapPiutang() {
   for (const r of rows) {
     let g = groups.find((x) => x.client_id === r.client_id);
     if (!g) {
-      g = { client_id: r.client_id, client_nama: r.client_nama, no_telp: r.no_telp, total: 0, invoices: [] };
+      g = { client_id: r.client_id, client_nama: r.client_nama, total: 0, invoices: [] };
       groups.push(g);
     }
     g.total += r.total;
