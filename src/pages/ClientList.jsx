@@ -13,7 +13,7 @@ export default function ClientList() {
   }, []);
 
   const hasil = clients.filter((c) =>
-    [c.nama, c.alamat, c.no_telp].join(' ').toLowerCase().includes(search.toLowerCase())
+    c.nama.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -44,19 +44,15 @@ export default function ClientList() {
       <div className="table-wrap">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500 border-b border-slate-200">
-            <tr>
+            <tr className="divide-x divide-slate-200">
               <th className="px-4 py-3 text-left font-medium">Nama Client</th>
-              <th className="px-4 py-3 text-left font-medium">Alamat</th>
-              <th className="px-4 py-3 text-left font-medium">No. Telepon</th>
               <th className="px-4 py-3 text-right font-medium w-32">Aksi</th>
             </tr>
           </thead>
           <tbody>
             {hasil.map((c) => (
-              <tr key={c.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+              <tr key={c.id} className="divide-x divide-slate-100 border-b border-slate-100 last:border-0 hover:bg-slate-50">
                 <td className="px-4 py-3 font-medium text-slate-800">{c.nama}</td>
-                <td className="px-4 py-3 text-slate-600">{c.alamat}</td>
-                <td className="px-4 py-3 text-slate-600">{c.no_telp}</td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-2">
                     <Link to={`/client/${c.id}/edit`} className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-brand-600">
@@ -70,7 +66,7 @@ export default function ClientList() {
               </tr>
             ))}
             {hasil.length === 0 && (
-              <tr><td colSpan={4} className="py-6 text-center text-sm text-slate-500">Tidak ada client yang cocok.</td></tr>
+              <tr><td colSpan={2} className="py-6 text-center text-sm text-slate-500">Tidak ada client yang cocok.</td></tr>
             )}
           </tbody>
         </table>

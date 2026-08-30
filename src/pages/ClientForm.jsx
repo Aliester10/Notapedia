@@ -11,8 +11,6 @@ export default function ClientForm() {
   const isEdit = Boolean(id);
 
   const [nama, setNama] = useState('');
-  const [alamat, setAlamat] = useState('');
-  const [noTelp, setNoTelp] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState('');
 
@@ -22,8 +20,6 @@ export default function ClientForm() {
       const edit = all.find((c) => c.id === Number(id));
       if (edit) {
         setNama(edit.nama);
-        setAlamat(edit.alamat ?? '');
-        setNoTelp(edit.no_telp ?? '');
       }
     });
   }, [id, isEdit]);
@@ -32,7 +28,7 @@ export default function ClientForm() {
     e.preventDefault();
     setError('');
     try {
-      const data = { nama, alamat, no_telp: noTelp };
+      const data = { nama };
       if (isEdit) await updateClient(Number(id), data);
       else await createClient(data);
       navigate('/client');
@@ -60,7 +56,7 @@ export default function ClientForm() {
 
       <PageHeader
         title={isEdit ? `Edit Client — ${nama || '...'}` : 'Client Baru'}
-        subtitle="Nama, alamat, dan nomor telepon client/pemesan."
+        subtitle="Nama client/pemesan."
         actions={
           isEdit && (
             <button className="btn-danger" onClick={() => setConfirmDelete(true)}>
@@ -85,25 +81,6 @@ export default function ClientForm() {
               value={nama}
               onChange={(e) => setNama(e.target.value)}
               required
-            />
-          </div>
-          <div>
-            <label className="label">Alamat</label>
-            <textarea
-              className="input min-h-[90px]"
-              placeholder="cth: Jl. Industri Raya No. 88, Surabaya"
-              value={alamat}
-              onChange={(e) => setAlamat(e.target.value)}
-            />
-          </div>
-          <div className="max-w-sm">
-            <label className="label">No. Telepon</label>
-            <input
-              type="text"
-              className="input"
-              placeholder="cth: 031-555-0101"
-              value={noTelp}
-              onChange={(e) => setNoTelp(e.target.value)}
             />
           </div>
         </div>
