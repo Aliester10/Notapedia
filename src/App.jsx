@@ -30,11 +30,14 @@ export default function App() {
         <Route path="/po/:id/edit" element={<POForm />} />
         <Route path="/surat-jalan" element={<SJList />} />
         <Route path="/surat-jalan/baru" element={<SJForm />} />
+        <Route path="/surat-jalan/:id/edit" element={<SJForm />} />
         <Route path="/surat-jalan/:id" element={<SJDetail />} />
         <Route path="/invoice" element={<InvoiceList />} />
         <Route path="/invoice/baru" element={<InvoiceForm />} />
+        <Route path="/invoice/:id/edit" element={<InvoiceForm />} />
         <Route path="/tanda-terima" element={<TandaTerimaList />} />
         <Route path="/tanda-terima/baru" element={<TandaTerimaForm />} />
+        <Route path="/tanda-terima/:id/edit" element={<TandaTerimaForm />} />
         <Route path="/laporan" element={<Laporan />} />
         <Route path="/riwayat" element={<RiwayatPO />} />
       </Routes>
