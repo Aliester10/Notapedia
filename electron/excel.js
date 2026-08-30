@@ -77,7 +77,7 @@ export async function buildLaporanBulanan({ bulan, tahun, sj, invoices, totalInv
   
   ws.mergeCells('A4:G4');
   const titleRow = ws.getCell('A4');
-  titleRow.value = 'LAPORAN BULANAN — SURAT JALAN & INVOICE';
+  titleRow.value = 'LAPORAN BULANAN';
   titleRow.font = { size: 14, bold: true };
   titleRow.alignment = { horizontal: 'center' };
   ws.getRow(4).height = 20;
