@@ -15,8 +15,8 @@ export default function POForm() {
   const [tanggal, setTanggal] = useState('');
   const [catatan, setCatatan] = useState('');
   const [items, setItems] = useState([
-    { nama_barang: '', satuan: '', qty_pesan: '' },
-    { nama_barang: '', satuan: '', qty_pesan: '' },
+    { nama_barang: '', satuan: 'KG', qty_pesan: '' },
+    { nama_barang: '', satuan: 'KG', qty_pesan: '' },
   ]);
   const [terlarangEdit, setTerlarangEdit] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -41,7 +41,7 @@ export default function POForm() {
   const updateItem = (i, field, value) =>
     setItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, [field]: value } : it)));
 
-  const tambahItem = () => setItems((prev) => [...prev, { nama_barang: '', satuan: '', qty_pesan: '' }]);
+  const tambahItem = () => setItems((prev) => [...prev, { nama_barang: '', satuan: 'KG', qty_pesan: '' }]);
   const hapusItem = (i) => setItems((prev) => prev.filter((_, idx) => idx !== i));
 
   const simpan = async (e) => {
@@ -147,7 +147,7 @@ export default function POForm() {
             </div>
             <table className="w-full text-sm">
               <thead className="text-xs text-slate-500 border-b border-slate-200">
-                <tr>
+                <tr className="divide-x divide-slate-200">
                   <th className="text-left py-2 font-medium">Nama Barang</th>
                   <th className="text-center py-2 font-medium w-24">Satuan</th>
                   <th className="text-right py-2 font-medium w-28">Qty Pesan</th>
@@ -156,7 +156,7 @@ export default function POForm() {
               </thead>
               <tbody>
                 {items.map((it, i) => (
-                  <tr key={i} className="border-b border-slate-100">
+                  <tr key={i} className="divide-x divide-slate-100 border-b border-slate-100">
                     <td className="py-2 pr-2">
                       <input
                         type="text"
@@ -170,10 +170,10 @@ export default function POForm() {
                     <td className="py-2 pr-2">
                       <input
                         type="text"
-                        className="input text-center"
-                        placeholder="batang"
+                        className="input text-center bg-slate-50 text-slate-500 cursor-not-allowed"
+                        placeholder="KG"
                         value={it.satuan}
-                        onChange={(e) => updateItem(i, 'satuan', e.target.value)}
+                        readOnly={true}
                         disabled={terlarangEdit}
                       />
                     </td>
