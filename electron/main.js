@@ -75,6 +75,7 @@ function registerIpc() {
   ipc('po:get', (id) => svc.getPO(id));
   ipc('po:create', (d) => svc.createPO(d));
   ipc('po:update', (id, d) => svc.updatePO(id, d));
+  ipc('po:remove', (id) => svc.removePO(id));
   ipc('po:riwayat', (id) => svc.riwayatPO(id));
 
   // ── Surat Jalan ──
@@ -82,6 +83,8 @@ function registerIpc() {
   ipc('sj:get', (id) => svc.getSJ(id));
   ipc('sj:listByPO', (poId) => svc.listSJByPO(poId));
   ipc('sj:create', (d) => svc.createSJ(d));
+  ipc('sj:update', (id, d) => svc.updateSJ(id, d));
+  ipc('sj:remove', (id) => svc.removeSJ(id));
   ipc('sj:confirm', (id, d) => svc.confirmSJ(id, d));
 
   // ── Invoice ──
@@ -89,6 +92,8 @@ function registerIpc() {
   ipc('invoice:get', (id) => svc.getInvoice(id));
   ipc('invoice:listByPO', (poId) => svc.listInvoiceByPO(poId));
   ipc('invoice:create', (d) => svc.createInvoice(d));
+  ipc('invoice:update', (id, d) => svc.updateInvoice(id, d));
+  ipc('invoice:remove', (id) => svc.removeInvoice(id));
   ipc('invoice:updateStatus', (id, status) => svc.updateInvoiceStatus(id, status));
   ipc('invoice:siapTagih', () => svc.invoicesSiapTagih());
 
@@ -96,6 +101,8 @@ function registerIpc() {
   ipc('tt:list', () => svc.listTandaTerima());
   ipc('tt:get', (id) => svc.getTandaTerima(id));
   ipc('tt:create', (d) => svc.createTandaTerima(d));
+  ipc('tt:update', (id, d) => svc.updateTandaTerima(id, d));
+  ipc('tt:remove', (id) => svc.removeTandaTerima(id));
 
   // ── Laporan & Dashboard ──
   ipc('laporan:bulanan', (bulan, tahun) => svc.laporanBulanan(bulan, tahun));

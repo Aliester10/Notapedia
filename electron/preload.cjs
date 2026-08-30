@@ -16,6 +16,7 @@ const api = {
     get: call('po:get'),
     create: call('po:create'),
     update: call('po:update'),
+    remove: call('po:remove'),
     riwayat: call('po:riwayat'),
   },
   sj: {
@@ -23,6 +24,8 @@ const api = {
     get: call('sj:get'),
     listByPO: call('sj:listByPO'),
     create: call('sj:create'),
+    update: call('sj:update'),
+    remove: call('sj:remove'),
     confirm: call('sj:confirm'),
   },
   invoice: {
@@ -30,6 +33,8 @@ const api = {
     get: call('invoice:get'),
     listByPO: call('invoice:listByPO'),
     create: call('invoice:create'),
+    update: call('invoice:update'),
+    remove: call('invoice:remove'),
     updateStatus: call('invoice:updateStatus'),
     siapTagih: call('invoice:siapTagih'),
   },
@@ -37,6 +42,8 @@ const api = {
     list: call('tt:list'),
     get: call('tt:get'),
     create: call('tt:create'),
+    update: call('tt:update'),
+    remove: call('tt:remove'),
   },
   laporan: {
     bulanan: call('laporan:bulanan'),
