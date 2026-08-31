@@ -58,36 +58,42 @@ function enqueue(task) {
 // info client (alamat/telp), tabel barang, grand total, terbilang & tanda tangan.
 const baseCss = `
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: 'Courier New', Courier, monospace; font-size: 11px; color: #000; background: #fff; }
-  .doc { max-width: 768px; margin: 0 auto; padding: 12px 16px; }
-  .header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-  .logo img { height: 72px; width: auto; }
-  .kanan { text-align: right; line-height: 18px; align-self: flex-end; }
-  .kanan .judul { font-size: 18px; font-weight: bold; letter-spacing: 1px; line-height: 24px; }
-  .header-line { border-bottom: 2px solid #000; margin-top: 8px; }
-  .meta { margin-top: 12px; font-size: 11px; line-height: 19px; }
-  .meta-2 { display: flex; justify-content: space-between; gap: 8px 28px; }
-  .meta .lbl { display: inline-block; width: 90px; white-space: nowrap; }
-  .meta .lbl-lg { display: inline-block; width: 140px; white-space: nowrap; }
-  table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-  th, td { border: 1px solid #000; padding: 2px 4px; vertical-align: top; }
-  th { font-weight: bold; background: #eee; white-space: nowrap; }
-  th.col-no { width: 30px; }
-  th.col-qty { width: 45px; }
-  th.col-satuan { width: 55px; }
-  th.col-harga { width: 120px; }
-  th.col-total { width: 120px; }
+  body { margin: 0; font-family: 'Arial', sans-serif; font-size: 15px; font-weight: 700; -webkit-font-smoothing: none; color: #000; background: #fff; line-height: 1.3; letter-spacing: 0.5px; }
+  .doc { width: 100%; margin: 0; padding: 0; }
+  .header { display: flex; align-items: flex-start; justify-content: space-between; position: relative; }
+  .logo img { height: 75px; width: auto; }
+  .judul-tengah { position: absolute; left: 50%; transform: translateX(-50%); text-align: center; font-size: 30px; font-weight: 900; letter-spacing: 2px; padding-top: 16px; }
+  .kanan { text-align: right; }
+  .header-line { border-bottom: 3px solid #000; margin-top: 8px; }
+  
+  .meta { margin-top: 20px; font-size: 15px; line-height: 1.5; }
+  .meta-2 { display: flex; justify-content: space-between; }
+  .meta-row { display: flex; align-items: flex-start; }
+  .meta-lbl { display: inline-block; width: 140px; font-weight: bold; }
+  .meta-sep { margin-right: 8px; }
+
+  table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 15px; border: 2px solid #000; }
+  th, td { border: 2px solid #000; padding: 2px 6px; vertical-align: top; }
+  th { font-weight: 900; background: #fff; text-align: center; vertical-align: middle; white-space: nowrap; }
+  th.col-no { width: 40px; }
+  th.col-qty { width: 80px; }
+  th.col-satuan { width: 80px; }
+  th.col-harga { width: 140px; }
+  th.col-total { width: 140px; }
   .num { text-align: right; }
   .center { text-align: center; }
-  tfoot td { font-weight: bold; border-top: 2px solid #000; }
-  .note { margin-top: 8px; font-size: 11px; }
-  .terbilang { margin-top: 10px; font-size: 11px; }
-  .sign { margin-top: 36px; display: grid; grid-template-columns: 1fr 1fr; gap: 32px; font-size: 11px; }
+  tfoot td { font-weight: 900; border-top: 3px solid #000; font-size: 16px; }
+  
+  .note { margin-top: 8px; font-size: 15px; font-weight: bold; }
+  .terbilang { margin-top: 8px; font-size: 15px; font-style: italic; }
+  
+  .sign { margin-top: 32px; display: flex; justify-content: space-between; padding: 0 48px; font-size: 15px; }
   .sign > div { text-align: center; }
-  .footer-container { margin-top: 32px; display: flex; justify-content: space-between; align-items: flex-start; }
-  .footnote-box { display: inline-block; border: 1px solid #000; padding: 6px 12px; font-size: 10px; text-align: center; line-height: 14px; font-weight: bold; }
-  .sign-right { font-size: 11px; text-align: center; width: 192px; }
-  .sign-right .space { margin-top: 56px; }
+  .space { padding-top: 36px; font-weight: bold; text-transform: uppercase; display: block; }
+
+  .footer-container { margin-top: 16px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .footnote-box { border: 2px solid #000; padding: 8px; font-size: 13px; text-align: center; line-height: 1.4; font-weight: bold; width: 420px; }
+  .sign-right { font-size: 15px; text-align: center; width: 220px; margin-right: 32px; }
 `;
 
 const fmtNum = (n) => (n ?? 0).toLocaleString('id-ID');
@@ -142,30 +148,38 @@ const terbilang = (n) => {
   return res.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 };
 
+export function pageSizeFor(type) {
+  return { width: 210000, height: 139700 };
+}
+
 // Ukuran kertas per tipe dokumen (CSS @page — dipakai printToPDF via preferCSSPageSize).
 // - invoice: setengah A4 (148 x 210 mm)
 // - SJ / TT: continuous form (210 x 139.7 mm = 5.5 inch)
 const pageCss = {
-  sj: '@page { size: 210mm 139.7mm; margin: 0; }',
-  invoice: '@page { size: 148mm 210mm; margin: 0; }',
-  'tanda-terima': '@page { size: 210mm 139.7mm; margin: 0; }',
-  'laporan-bulanan': '@page { size: 210mm 297mm; margin: 0; }',
-  'rekap-piutang': '@page { size: 210mm 297mm; margin: 0; }',
+  sj: '@page { margin: 0.8cm 1.3cm 1.3cm 1.3cm; }',
+  invoice: '@page { margin: 0.8cm 1.3cm 1.3cm 1.3cm; }',
+  'tanda-terima': '@page { margin: 0.8cm 1.3cm 1.3cm 1.3cm; }',
+  'laporan-bulanan': '@page { size: 210mm 297mm; margin: 0.8cm 1.3cm 1.3cm 1.3cm; }',
+  'rekap-piutang': '@page { size: 210mm 297mm; margin: 0.8cm 1.3cm 1.3cm 1.3cm; }',
 };
 
 function docHtml({ css, body }) {
   return `<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body>${body}</body></html>`;
 }
 
+function renderMetaRow(label, value) {
+  return `<div class="meta-row"><span class="meta-lbl">${label}</span><span class="meta-sep">:</span><span>${value || '-'}</span></div>`;
+}
+
 // Logo toko (cingculogo) — direferensikan relatif karena HTML dimuat dari file temp.
-function headerBlock(judul, lines, centerJudul = false) {
+function headerBlock(judul, no_doc, tgl) {
   return `
-    <div class="header" style="position: relative;">
+    <div class="header">
       <div class="logo"><img src="logo.png" alt="logo" /></div>
-      ${centerJudul ? `<div class="judul" style="position: absolute; left: 50%; transform: translateX(-50%); text-align: center; font-size: 18px; font-weight: bold; letter-spacing: 1px; top: 10px;">${judul}</div>` : ''}
+      <div class="judul-tengah">${judul}</div>
       <div class="kanan">
-        ${!centerJudul ? `<div class="judul">${judul}</div>` : ''}
-        ${lines.map((l) => `<div>${l}</div>`).join('')}
+        <div style="font-size: 24px; font-weight: bold; margin-bottom: 4px;">No. ${no_doc}</div>
+        <div style="font-size: 15px;">${tgl}</div>
       </div>
     </div>
     <div class="header-line"></div>`;
@@ -175,8 +189,8 @@ function htmlSJ(sj) {
   const rows = sj.items
     .map(
       (it, i) => `<tr>
-        <td>${i + 1}</td><td>${it.nama_barang}</td><td>${it.satuan || ''}</td>
-        <td class="center">${fmtNum(it.qty_kirim)}</td><td>${it.keterangan || ''}</td>
+        <td class="center">${i + 1}</td><td>${it.nama_barang}</td><td class="center">${it.satuan || ''}</td>
+        <td class="center" style="font-weight: bold;">${fmtNum(it.qty_kirim)}</td><td>${it.keterangan || ''}</td>
       </tr>`
     )
     .join('');
@@ -186,23 +200,23 @@ function htmlSJ(sj) {
   );
   const body = `
     <div class="doc">
-      ${headerBlock('SURAT JALAN', [`<span style="font-size: 24px; font-weight: bold;">No. ${sj.no_sj}</span>`, fmtTanggal(sj.tanggal_kirim)], true)}
+      ${headerBlock('SURAT JALAN', sj.no_sj, fmtTanggal(sj.tanggal_kirim))}
       <div class="meta meta-2">
-        <div>
-          <div><span class="lbl">No. PO</span>: ${sj.no_po}</div>
-          <div><span class="lbl">Pengirim</span>: ${sj.nama_pengirim || ''}</div>
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          ${renderMetaRow('No. PO', sj.no_po)}
+          ${renderMetaRow('Pengirim', sj.nama_pengirim)}
         </div>
-        <div>
-          <div><span class="lbl">Kepada Yth.</span>: ${sj.client_nama}</div>
+        <div style="display: flex; flex-direction: column; gap: 4px; padding-right: 32px;">
+          ${renderMetaRow('Kepada Yth.', sj.client_nama)}
         </div>
       </div>
       <table>
-        <thead><tr><th class="center">No</th><th class="center">Nama Barang</th><th class="center">Satuan</th><th class="center">Qty</th><th class="center">Keterangan</th></tr></thead>
+        <thead><tr><th class="col-no">No</th><th>Nama Barang</th><th class="col-satuan">Satuan</th><th class="col-qty">Qty</th><th>Keterangan</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
       ${returTotal > 0 ? `<div class="note">Catatan Retur: ${fmtNum(returTotal)} ditolak / dikembalikan.</div>` : ''}
       <div class="sign">
-        <div><div>Pengirim,</div><div class="space">${sj.nama_pengirim || '................'}</div></div>
+        <div><div>Pengirim,</div><div class="space">( ${sj.nama_pengirim || '................'} )</div></div>
         <div><div>Penerima,</div><div class="space">( ${sj.client_nama} )</div></div>
       </div>
     </div>`;
@@ -213,38 +227,37 @@ function htmlInvoice(inv) {
   const rows = inv.items
     .map(
       (it, i) => `<tr>
-        <td>${i + 1}</td><td>${it.nama_barang}</td><td class="center">${fmtNum(it.qty)}</td><td>${it.satuan || ''}</td>
-        <td class="center">${fmtNum(it.harga_satuan)}</td>
-        <td class="center">${fmtNum(it.subtotal)}</td>
+        <td class="center">${i + 1}</td><td>${it.nama_barang}</td><td class="center" style="font-weight: bold;">${fmtNum(it.qty)}</td><td class="center">${it.satuan || ''}</td>
+        <td class="num">${fmtNum(it.harga_satuan)}</td>
+        <td class="num" style="font-weight: bold;">${fmtNum(it.subtotal)}</td>
       </tr>`
     )
     .join('');
   const body = `
     <div class="doc">
-      ${headerBlock('INVOICE', [`No. ${inv.no_invoice}`, fmtTanggal(inv.tanggal_invoice)], true)}
+      ${headerBlock('INVOICE', inv.no_invoice, fmtTanggal(inv.tanggal_invoice))}
       <div class="meta meta-2">
-        <div>
-          <div><span class="lbl">No. PO</span>: ${inv.no_po}</div>
-          <div><span class="lbl">No. SJ</span>: ${inv.no_sj}</div>
-          ${inv.rest ? `<div><span class="lbl">Rest</span>: ${inv.rest}</div>` : ''}
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          ${renderMetaRow('No. PO', inv.no_po)}
+          ${renderMetaRow('No. SJ', inv.no_sj)}
         </div>
-        <div>
-          <div><span class="lbl">Kepada Yth.</span>: ${inv.client_nama}</div>
+        <div style="display: flex; flex-direction: column; gap: 4px; padding-right: 32px;">
+          ${renderMetaRow('Kepada Yth.', inv.client_nama)}
         </div>
       </div>
       <table>
-        <thead><tr><th class="center col-no">No</th><th class="center">Nama Barang</th><th class="center col-qty">Qty</th><th class="center col-satuan">Satuan</th><th class="center col-harga">Harga Satuan (Rp)</th><th class="center col-total">Total (Rp)</th></tr></thead>
+        <thead><tr><th class="col-no">No</th><th>Nama Barang</th><th class="col-qty">Qty</th><th class="col-satuan">Satuan</th><th class="col-harga">Harga Satuan (Rp)</th><th class="col-total">Total (Rp)</th></tr></thead>
         <tbody>${rows}</tbody>
-        <tfoot><tr><td colspan="5" class="num">GRAND TOTAL</td><td class="center">${fmtNum(inv.total)}</td></tr></tfoot>
+        <tfoot><tr><td colspan="5" class="num">GRAND TOTAL</td><td class="num" style="font-size: 20px;">${fmtNum(inv.total)}</td></tr></tfoot>
       </table>
-      <div class="terbilang" style="font-style: italic;">Terbilang: ${terbilang(inv.total)} Rupiah.</div>
+      <div class="terbilang">Terbilang: ${terbilang(inv.total)} Rupiah.</div>
       <div class="footer-container">
-        <div class="footnote-box" style="font-weight: bold; font-size: 11px; line-height: 1.5; border: 1px solid black; padding: 8px; max-width: 340px;">
+        <div class="footnote-box">
           MOHON LAKUKAN PEMBAYARAN TEPAT WAKTU<br/>
           UNTUK MENGHINDARI KETERLAMBATAN BARANG DAN DEMI KELANCARAN PRODUKSI BERSAMA.
         </div>
         <div class="sign-right">
-          <div>Hormat Kami,</div><div class="space">Antonius Sumera</div>
+          <div>Hormat Kami,</div><div class="space">( Antonius Sumera )</div>
         </div>
       </div>
     </div>`;
@@ -255,25 +268,25 @@ function htmlTandaTerima(tt) {
   const rows = tt.items
     .map(
       (it, i) => `<tr>
-        <td>${i + 1}</td><td>${it.no_invoice}</td><td>${fmtTanggal(it.tanggal_invoice)}</td>
-        <td>${it.no_po || ''}</td><td>${fmtTanggal(it.tanggal_po)}</td>
-        <td class="num">${rupiah(it.jumlah)}</td>
+        <td class="center">${i + 1}</td><td class="center">${it.no_invoice}</td><td class="center">${fmtTanggal(it.tanggal_invoice)}</td>
+        <td class="center">${it.no_po || ''}</td><td class="center">${fmtTanggal(it.tanggal_po)}</td>
+        <td class="num" style="font-weight: bold;">${rupiah(it.jumlah)}</td>
       </tr>`
     )
     .join('');
   const body = `
     <div class="doc">
-      ${headerBlock('TANDA TERIMA', [`<span style="font-size: 24px; font-weight: bold;">No. ${tt.no_dokumen}</span>`, fmtTanggal(tt.tanggal)], true)}
-      <div class="meta">
-        <div><span class="lbl-lg">Diserahkan oleh</span>: ${tt.diserahkan_oleh || ''}</div>
-        <div><span class="lbl-lg">Diterima oleh</span>: ${tt.diterima_oleh || '-'}</div>
+      ${headerBlock('TANDA TERIMA', tt.no_dokumen, fmtTanggal(tt.tanggal))}
+      <div class="meta" style="display: flex; flex-direction: column; gap: 4px;">
+        ${renderMetaRow('Diserahkan oleh', tt.diserahkan_oleh)}
+        ${renderMetaRow('Diterima oleh', tt.diterima_oleh || '-')}
       </div>
       <table>
-        <thead><tr><th class="center">No</th><th class="center">No. Invoice</th><th class="center">Tgl Invoice</th><th class="center">No. PO</th><th class="center">Tanggal PO</th><th class="center">Jumlah (Rp)</th></tr></thead>
+        <thead><tr><th class="col-no">No</th><th>No. Invoice</th><th>Tgl Invoice</th><th>No. PO</th><th>Tanggal PO</th><th style="width: 200px;">Jumlah (Rp)</th></tr></thead>
         <tbody>${rows}</tbody>
-        <tfoot><tr><td colspan="5" class="num">GRAND TOTAL</td><td class="num">${rupiah(tt.total)}</td></tr></tfoot>
+        <tfoot><tr><td colspan="5" class="num">GRAND TOTAL</td><td class="num" style="font-size: 20px;">${rupiah(tt.total)}</td></tr></tfoot>
       </table>
-      <div class="terbilang" style="font-style: italic;">Terbilang: ${terbilang(tt.total)} Rupiah.</div>
+      <div class="terbilang">Terbilang: ${terbilang(tt.total)} Rupiah.</div>
       <div class="sign">
         <div><div>Yang Menyerahkan,</div><div class="space">( ${tt.diserahkan_oleh || '................'} )</div></div>
         <div><div>Yang Menerima,</div><div class="space">( ${tt.diterima_oleh || '................'} )</div></div>
@@ -289,15 +302,9 @@ export function renderDoc(type, data) {
   throw new Error('Tipe dokumen tidak dikenal: ' + type);
 }
 
-// Ukuran halaman custom (micron).
-// - Invoice: setengah A4 (148 x 210 mm)
-// - SJ / TT: continuous form (lebar A4, tinggi custom 139.7 mm = 5.5 inch)
-export function pageSizeFor(type) {
-  if (type === 'invoice') return { width: 148000, height: 210000 };
-  return { width: 210000, height: 139700 };
-}
 
-export function printDocument(type, data, { deviceName, silent = true } = {}) {
+
+export function printDocument(type, data, { deviceName, silent = false } = {}) {
   return enqueue(async () => {
     const html = renderDoc(type, data);
     const { htmlPath, dir } = prepareDoc(html);
@@ -311,7 +318,6 @@ export function printDocument(type, data, { deviceName, silent = true } = {}) {
             silent,
             printBackground: true,
             deviceName: deviceName || undefined,
-            pageSize,
             margins: { marginType: 'none' },
             landscape: false,
           },
@@ -457,9 +463,9 @@ export function saveDocumentPdf(type, data) {
       await win.loadFile(htmlPath);
       const pdf = await win.webContents.printToPDF({
         printBackground: true,
-        preferCSSPageSize: true,
+        preferCSSPageSize: false,
+        pageSize: pageSizeFor(type),
         margins: { top: 0, bottom: 0, left: 0, right: 0 },
-        pageSize: pdfPageSizeFor(type),
         landscape: false,
       });
       return pdf;
