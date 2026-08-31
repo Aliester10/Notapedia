@@ -180,7 +180,6 @@ export default function SJForm() {
                           <td className="px-3 py-2">
                             <input
                               type="number"
-                              max={sisa}
                               className="input text-right"
                               placeholder="0"
                               value={val.qty_kirim}
@@ -212,7 +211,7 @@ export default function SJForm() {
 
         <div className="card p-5 h-fit">
           <h3 className="font-semibold text-slate-900 mb-3">Aksi</h3>
-          <p className="text-sm text-slate-500 mb-4">No SJ di-generate otomatis. Qty kirim tidak boleh melebihi sisa PO.</p>
+          <p className="text-sm text-slate-500 mb-4">No SJ di-generate otomatis.</p>
           <div className="flex flex-col gap-2">
             <button className="btn-primary justify-center" onClick={() => simpan(true)} disabled={loading || !po}>
               <Save className="h-4 w-4" /> {loading ? 'Menyimpan...' : 'Simpan & Cetak'}

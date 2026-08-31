@@ -233,7 +233,7 @@ export function createSJ({ po_id, tanggal_kirim, nama_pengirim = '', catatan = '
       `).get(it.po_item_id, po_id);
       if (!pi) throw err('Item PO tidak valid.');
       const sisa = pi.qty_pesan - pi.qty_terkirim - pi.qty_sj;
-      if (qty > sisa) throw err(`Qty kirim melebihi sisa PO untuk "${it.nama_barang || 'item'}" (sisa ${sisa}).`);
+      // if (qty > sisa) throw err(`Qty kirim melebihi sisa PO untuk "${it.nama_barang || 'item'}" (sisa ${sisa}).`);
     }
 
     const noSJ = nextNo('SJ', 'surat_jalan');
@@ -283,7 +283,7 @@ export function updateSJ(id, { tanggal_kirim, nama_pengirim = '', catatan = '', 
 
       if (!pi) throw err('Item PO tidak valid.');
       const sisa = pi.qty_pesan - pi.qty_terkirim - pi.qty_sj;
-      if (qty > sisa) throw err(`Qty kirim melebihi sisa PO untuk item ini (sisa ${sisa}).`);
+      // if (qty > sisa) throw err(`Qty kirim melebihi sisa PO untuk item ini (sisa ${sisa}).`);
     }
 
     d.prepare('UPDATE surat_jalan SET tanggal_kirim=?, nama_pengirim=?, catatan=? WHERE id=?')
