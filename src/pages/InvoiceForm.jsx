@@ -160,10 +160,6 @@ export default function InvoiceForm() {
               </select>
               <p className="mt-1 text-xs text-slate-500">Hanya SJ berstatus "Diterima Penuh" / "Diterima Sebagian" yang dapat dipilih.</p>
             </div>
-            <div className="sm:col-span-2">
-              <label className="label">Form Rest (Opsional)</label>
-              <input type="text" className="input" placeholder="Isi catatan / form rest di sini..." value={rest} onChange={(e) => setRest(e.target.value)} />
-            </div>
           </div>
 
           {sj ? (
