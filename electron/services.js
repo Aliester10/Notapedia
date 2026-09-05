@@ -14,7 +14,12 @@ const hariIni = () => new Date().toISOString().slice(0, 10);
 
 function nextNo(prefix, table) {
   const d = getDb();
-  const row = d.prepare(`SELECT COALESCE(MAX(id), 0) + 1 AS n FROM ${table}`).get();
+  let col = 'no_' + table;
+  if (table === 'surat_jalan') col = 'no_sj';
+  if (table === 'tanda_terima') col = 'no_dokumen';
+  
+  const prefixLen = prefix.length + 2;
+  const row = d.prepare(`SELECT COALESCE(MAX(CAST(SUBSTR(${col}, ${prefixLen}) AS INTEGER)), 0) + 1 AS n FROM ${table} WHERE ${col} LIKE '${prefix}-%'`).get();
   return `${prefix}-${String(row.n).padStart(4, '0')}`;
 }
 
